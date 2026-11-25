@@ -3,6 +3,7 @@ import express from "express";
 import cors from "cors";
 import { connectDB, getDbState } from "./config/db.js";
 import demoRoutes from "./routes/demoRoutes.js";
+import rentalRoutes from "./routes/rentalRoutes.js";
 
 const app = express();
 const PORT = Number(process.env.PORT) || 5000;
@@ -37,10 +38,21 @@ app.get("/health", (req, res) => {
 });
 
 app.use("/api/demo", demoRoutes);
+app.use("/api/rentals", rentalRoutes);
 
 app.use((err, req, res, next) => {
   console.error("[server] Unhandled error:", err);
-  const status = err.status || 500;
+  if (err?.name === "MulterError") {
+    return res.status(400).json({
+      ok: false,
+      error: err.message || "File upload error",
+      code: err.code,
+    });
+  }
+  const status =
+    err.status ||
+    err.statusCode ||
+    (err?.name === "ValidationError" || err?.name === "CastError" ? 400 : 500);
   res.status(status).json({
     ok: false,
     error: err.message || "Internal server error",
