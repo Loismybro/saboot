@@ -200,7 +200,16 @@ export async function runSeedData() {
   // Demo 2: UNDER_REVIEW MacBook Air M2 Kit (pre-populated Inspection + Settlement)
   const demo2Title = "MacBook Air M2 Study Kit (Synthetic Demo)";
   const existing2 = await Rental.findOne({ title: demo2Title });
-  if (!existing2) {
+  let needsDemo2 = !existing2;
+  if (existing2) {
+    const existingSettlement = await Settlement.findOne({ rentalId: existing2._id });
+    if (!existingSettlement) {
+      await Inspection.deleteMany({ rentalId: existing2._id });
+      await Rental.deleteOne({ _id: existing2._id });
+      needsDemo2 = true;
+    }
+  }
+  if (needsDemo2) {
     const inImg = await renderSyntheticWebp(
       makeLaptopSvg({ showNewMark: false, missingCharger: false }),
       "demo-laptop-checkin.webp"

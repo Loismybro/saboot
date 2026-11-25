@@ -10,6 +10,41 @@ const imageSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const preExistingIgnoredSchema = new mongoose.Schema(
+  {
+    zone: String,
+    description: String,
+    reason: String,
+  },
+  { _id: false }
+);
+
+const newFindingSchema = new mongoose.Schema(
+  {
+    type: { type: String, enum: ["damage", "missing_accessory"], required: true },
+    zone: String,
+    itemKeyword: String,
+    description: String,
+    severity: {
+      type: String,
+      enum: ["minor", "moderate", "severe", "missing"],
+    },
+    evidenceNote: String,
+  },
+  { _id: false }
+);
+
+const agentTraceStepSchema = new mongoose.Schema(
+  {
+    step: String,
+    status: { type: String, enum: ["PASS", "WARN", "FLAG", "ERROR"] },
+    detail: String,
+    durationMs: Number,
+    timestamp: { type: Date, default: Date.now },
+  },
+  { _id: false }
+);
+
 const inspectionSchema = new mongoose.Schema(
   {
     rentalId: {
@@ -21,35 +56,9 @@ const inspectionSchema = new mongoose.Schema(
     sameObjectConfirmed: { type: Boolean, default: true },
     qualityWarning: { type: String, default: null },
     checkoutImages: [imageSchema],
-    preExistingIgnored: [
-      {
-        zone: String,
-        description: String,
-        reason: String,
-      },
-    ],
-    newFindings: [
-      {
-        type: { type: String, enum: ["damage", "missing_accessory"] },
-        zone: String,
-        itemKeyword: String,
-        description: String,
-        severity: {
-          type: String,
-          enum: ["minor", "moderate", "severe", "missing"],
-        },
-        evidenceNote: String,
-      },
-    ],
-    agentTrace: [
-      {
-        step: String,
-        status: { type: String, enum: ["PASS", "WARN", "FLAG", "ERROR"] },
-        detail: String,
-        durationMs: Number,
-        timestamp: { type: Date, default: Date.now },
-      },
-    ],
+    preExistingIgnored: [preExistingIgnoredSchema],
+    newFindings: [newFindingSchema],
+    agentTrace: [agentTraceStepSchema],
   },
   { timestamps: true }
 );

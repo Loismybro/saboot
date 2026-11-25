@@ -1,5 +1,21 @@
 import mongoose from "mongoose";
 
+const lineItemSchema = new mongoose.Schema(
+  {
+    findingDescription: { type: String, required: true },
+    type: { type: String, required: true },
+    severity: { type: String, required: true },
+    matchedRateId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "RepairRate",
+      default: null,
+    },
+    rateSourceLabel: { type: String, default: "" },
+    deductionAmount: { type: Number, required: true, min: 0 },
+  },
+  { _id: false }
+);
+
 const settlementSchema = new mongoose.Schema(
   {
     rentalId: {
@@ -13,20 +29,7 @@ const settlementSchema = new mongoose.Schema(
       required: true,
     },
     depositAmount: { type: Number, required: true, min: 0 },
-    lineItems: [
-      {
-        findingDescription: String,
-        type: String,
-        severity: String,
-        matchedRateId: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "RepairRate",
-          default: null,
-        },
-        rateSourceLabel: String,
-        deductionAmount: Number,
-      },
-    ],
+    lineItems: [lineItemSchema],
     totalDeduction: { type: Number, required: true, min: 0 },
     refundToRenter: { type: Number, required: true, min: 0 },
     reviewerGate: {

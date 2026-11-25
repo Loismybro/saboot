@@ -18,7 +18,7 @@
 
 ## Phase Checklist
 - [x] **Phase 0:** Implementation plan finalized, persistent memory (`IMPLEMENTATION_PLAN.md`, `PROGRESS.md`, `.gitignore`), & GitHub repo `Loismybro/saboot` created
-- [ ] **Phase 1:** Monorepo Scaffold, MongoDB Connection & Seed Data + Gate 1 Verification *(Code scaffolded; awaiting `MONGODB_URI` for Gate 1)*
+- [x] **Phase 1:** Monorepo Scaffold, MongoDB Connection & Seed Data + **Gate 1 PASSED**
 - [ ] **Phase 2:** Image Compression, SHA-256 Seal & Check-In Agent + Gate 2 Verification
 - [ ] **Phase 3:** Forensic Visual-Diff Agent, Rate Lookup & Reviewer QA Gate + Gate 3 Verification
 - [ ] **Phase 4:** Stateless MCP Server (`/mcp`) & Overdue Cron Job + Gate 4 Verification
@@ -29,15 +29,18 @@
 ---
 
 ## Current Phase & Next Action
-- **Current Status:** Phase 1 code scaffolded & verified locally (`node --check` passed on all server files, `/health` returned 200 with `dbState: "disconnected"`, `client` Vite build passed in 356ms with 0 vulnerabilities). GitHub auth + `GEMINI_API_KEY` loaded from Colab Secrets.
-- **Pending Blocker:** Waiting for `MONGODB_URI` in Colab Secrets to complete Gate 1 Verification (`dbState: "connected"` + idempotent `POST /api/demo/seed`).
-- **Next Action:**
-  1. Re-run the Colab Secrets setup cell once `MONGODB_URI` is added.
-  2. Run Gate 1 Verification (`GET /health` + `POST /api/demo/seed` twice).
-  3. Proceed to Phase 2 (`imagePrep.js`, `geminiClient.js`, `schemas.js`, `checkinAgent.js`, `rentalRoutes.js`).
+- **Current Status:** **Phase 1 / Gate 1 PASSED.**
+  - Verified `GET /health` -> `200`, `dbState: "connected"`, `model: "gemini-3.5-flash-lite"`.
+  - Verified idempotent `POST /api/demo/seed` (51 `repair_rates` + 2 synthetic demo rentals seeded; second run inserted 0 duplicates).
+  - Fixed Mongoose inline `type` field casting issue in `Settlement.js` and `Inspection.js` by using explicit sub-schemas.
+  - Verified `/client` `vite build` passes cleanly in 356ms.
+- **Next Action (Phase 2):**
+  - Build `server/utils/imagePrep.js`, `server/utils/geminiClient.js`, `server/agents/schemas.js`, `server/agents/checkinAgent.js`, and `server/routes/rentalRoutes.js`.
+  - Run Gate 2 Verification (`POST /api/rentals/checkin` with real images, confirm WebP < 150KB & 64-char SHA-256 seal, test `/verify-hash`, `/simulate-tamper`, and `/restore-seal`).
 
 ---
 
 ## Session Log
-- **2026-11-25:** Initialized `/content/saboot`, saved `IMPLEMENTATION_PLAN.md`, created `PROGRESS.md` & `.gitignore`, verified Node 22 / npm / git / gh / npm package compatibility (`@google/genai@3.6.1`, `zod@4.6.7`, `@modelcontextprotocol/sdk@1.32.2`, `sharp@0.35.5`).
-- **2026-11-25:** Scaffolded `/server` (Express, Mongoose models `Rental`, `Inspection`, `Settlement`, `RepairRate`, `hash.js`, `seedData.js` with 51 rates + 2 synthetic demos, `demoRoutes.js`) and `/client` (Vite 8 + React 19 + Tailwind v4). Connected GitHub (`Loismybro/saboot`) and wired `GEMINI_API_KEY` into `server/.env`.
+- **2026-11-25:** Initialized `/content/saboot`, saved `IMPLEMENTATION_PLAN.md`, created `PROGRESS.md` & `.gitignore`, verified Node 22 / npm / git / gh / npm package compatibility.
+- **2026-11-25:** Scaffolded `/server` & `/client`; pushed commit `1ec5ca2` to `Loismybro/saboot`.
+- **2026-11-25:** Wired `MONGODB_URI` & `GEMINI_API_KEY` from Colab Secrets; fixed Mongoose `lineItems` sub-schema in `Settlement.js` and `Inspection.js`; passed Gate 1 (`dbState: "connected"`, `51` repair rates + `2` synthetic demo rentals idempotent).
