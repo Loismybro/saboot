@@ -4,6 +4,7 @@ import cors from "cors";
 import { connectDB, getDbState } from "./config/db.js";
 import demoRoutes from "./routes/demoRoutes.js";
 import rentalRoutes from "./routes/rentalRoutes.js";
+import settlementRoutes from "./routes/settlementRoutes.js";
 
 const app = express();
 const PORT = Number(process.env.PORT) || 5000;
@@ -39,6 +40,7 @@ app.get("/health", (req, res) => {
 
 app.use("/api/demo", demoRoutes);
 app.use("/api/rentals", rentalRoutes);
+app.use("/api/settlements", settlementRoutes);
 
 app.use((err, req, res, next) => {
   console.error("[server] Unhandled error:", err);

@@ -7,6 +7,9 @@ import { Settlement } from "../models/Settlement.js";
 import { prepareImages } from "../utils/imagePrep.js";
 import { computeBaselineSealHash, verifyRentalSeal } from "../utils/hash.js";
 import { analyzeCheckIn } from "../agents/checkinAgent.js";
+import { runForensicDiff } from "../agents/forensicDiffAgent.js";
+import { lookupRepairRatesAndCalculate } from "../agents/rateLookupTool.js";
+import { runReviewerGate } from "../agents/reviewerGate.js";
 
 const router = express.Router();
 
@@ -256,6 +259,131 @@ router.post("/checkin", handlePhotoUpload, async (req, res, next) => {
       ok: true,
       rental,
       sealVerification,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post("/:id/checkout", handlePhotoUpload, async (req, res, next) => {
+  try {
+    validateObjectIdOr400(req.params.id);
+
+    const rental = await Rental.findById(req.params.id);
+    if (!rental) {
+      return res.status(404).json({ ok: false, error: "Rental not found." });
+    }
+    if (!rental.baselineSeal) {
+      throw createBadRequestError("Rental does not have a baselineSeal.");
+    }
+
+    const uploadedFiles = getUploadedFiles(req);
+    const preparedImages = await prepareImages(uploadedFiles);
+
+    const agentTrace = [];
+
+    // Stage 1: Deterministic SHA-256 baseline seal verification
+    const hashStart = Date.now();
+    const sealCheck = verifyRentalSeal(rental);
+    const hashIntegrityPassed = Boolean(sealCheck.valid);
+    agentTrace.push({
+      step: "HASH_VERIFY",
+      status: hashIntegrityPassed ? "PASS" : "FLAG",
+      detail: hashIntegrityPassed
+        ? `SHA-256 baseline seal verified (${String(sealCheck.expectedHash || "").slice(0, 16)}...)`
+        : `SHA-256 seal mismatch: ${sealCheck.tamperedFieldHint || "baseline integrity check failed"}`,
+      durationMs: Math.max(1, Date.now() - hashStart),
+      timestamp: new Date(),
+    });
+
+    // Stage 2: Gemini multimodal Forensic Visual-Diff
+    const diffStart = Date.now();
+    const diff = await runForensicDiff({
+      rental,
+      checkoutImages: preparedImages,
+    });
+    const diffStatus = !diff.sameObjectConfirmed
+      ? "FLAG"
+      : diff.qualityWarning
+      ? "WARN"
+      : "PASS";
+    agentTrace.push({
+      step: "FORENSIC_DIFF",
+      status: diffStatus,
+      detail: !diff.sameObjectConfirmed
+        ? `Object/quality mismatch flagged: ${diff.qualityWarning || "Check-Out photos could not be confirmed as the same item."}`
+        : `Ignored ${diff.preExistingIgnored.length} pre-existing flaw(s); isolated ${diff.newFindings.length} new finding(s).${diff.qualityWarning ? ` Warning: ${diff.qualityWarning}` : ""}`,
+      durationMs: Math.max(1, Date.now() - diffStart),
+      timestamp: new Date(),
+    });
+
+    // Stage 3: Deterministic MongoDB repair_rates lookup & INR math
+    const rateStart = Date.now();
+    const { lineItems, totalDeduction, refundToRenter } =
+      await lookupRepairRatesAndCalculate({
+        category: rental.category,
+        depositAmount: rental.depositAmount,
+        newFindings: diff.newFindings,
+      });
+    agentTrace.push({
+      step: "RATE_LOOKUP",
+      status: "PASS",
+      detail:
+        lineItems.length > 0
+          ? `Matched ${lineItems.length} deterministic repair rate(s): deduction ₹${totalDeduction}, refund ₹${refundToRenter} (deposit ₹${rental.depositAmount}).`
+          : `No new billable findings: deduction ₹0, full refund ₹${refundToRenter} (deposit ₹${rental.depositAmount}).`,
+      durationMs: Math.max(1, Date.now() - rateStart),
+      timestamp: new Date(),
+    });
+
+    // Stage 4: Adversarial Reviewer QA Gate + deterministic safety overrides
+    const reviewerStart = Date.now();
+    const reviewerGate = await runReviewerGate({
+      rental,
+      diff,
+      lineItems,
+      totalDeduction,
+      hashIntegrityPassed,
+    });
+    agentTrace.push({
+      step: "REVIEWER_QA_GATE",
+      status: reviewerGate.verdict === "FLAG" ? "FLAG" : "PASS",
+      detail: `${reviewerGate.verdict} (${reviewerGate.confidence}% confidence): ${reviewerGate.auditReasoning}`,
+      durationMs: Math.max(1, Date.now() - reviewerStart),
+      timestamp: new Date(),
+    });
+
+    const inspection = await Inspection.create({
+      rentalId: rental._id,
+      hashIntegrityPassed,
+      sameObjectConfirmed: diff.sameObjectConfirmed,
+      qualityWarning: diff.qualityWarning,
+      checkoutImages: preparedImages,
+      preExistingIgnored: diff.preExistingIgnored,
+      newFindings: diff.newFindings,
+      agentTrace,
+    });
+
+    const settlement = await Settlement.create({
+      rentalId: rental._id,
+      inspectionId: inspection._id,
+      depositAmount: rental.depositAmount,
+      lineItems,
+      totalDeduction,
+      refundToRenter,
+      reviewerGate,
+      hitlStatus: "PENDING_APPROVAL",
+    });
+
+    rental.status = "UNDER_REVIEW";
+    await rental.save();
+
+    res.json({
+      ok: true,
+      rental,
+      inspection,
+      settlement,
+      sealVerification: sealCheck,
     });
   } catch (err) {
     next(err);
