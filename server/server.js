@@ -5,6 +5,8 @@ import { connectDB, getDbState } from "./config/db.js";
 import demoRoutes from "./routes/demoRoutes.js";
 import rentalRoutes from "./routes/rentalRoutes.js";
 import settlementRoutes from "./routes/settlementRoutes.js";
+import { handleMcpRequest } from "./mcp/mcpServer.js";
+import { runOverdueScan, startOverdueCron } from "./jobs/overdueJob.js";
 
 const app = express();
 const PORT = Number(process.env.PORT) || 5000;
@@ -23,6 +25,9 @@ app.use(
       return callback(new Error(`CORS blocked for origin: ${origin}`));
     },
     credentials: true,
+    methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Accept", "Mcp-Session-Id", "Authorization"],
+    exposedHeaders: ["Mcp-Session-Id"],
   })
 );
 
@@ -41,6 +46,15 @@ app.get("/health", (req, res) => {
 app.use("/api/demo", demoRoutes);
 app.use("/api/rentals", rentalRoutes);
 app.use("/api/settlements", settlementRoutes);
+app.post("/mcp", handleMcpRequest);
+app.post("/api/jobs/run-overdue", async (req, res, next) => {
+  try {
+    const result = await runOverdueScan();
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+});
 
 app.use((err, req, res, next) => {
   console.error("[server] Unhandled error:", err);
@@ -63,6 +77,7 @@ app.use((err, req, res, next) => {
 
 async function start() {
   await connectDB();
+  startOverdueCron();
   app.listen(PORT, () => {
     console.log(`[server] Saboot API listening on http://localhost:${PORT}`);
   });
