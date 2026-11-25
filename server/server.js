@@ -11,10 +11,21 @@ import { runOverdueScan, startOverdueCron } from "./jobs/overdueJob.js";
 const app = express();
 const PORT = Number(process.env.PORT) || 5000;
 
-const allowedOrigins = (process.env.CORS_ORIGIN || "http://localhost:5173")
+const LOCAL_DEV_ORIGINS = [
+  "http://localhost:5173",
+  "http://localhost:4173",
+  "http://127.0.0.1:5173",
+  "http://127.0.0.1:4173",
+];
+
+const envOrigins = (process.env.CORS_ORIGIN || "")
   .split(",")
   .map((o) => o.trim())
   .filter(Boolean);
+
+const allowedOrigins = Array.from(
+  new Set([...LOCAL_DEV_ORIGINS, ...envOrigins])
+);
 
 app.use(
   cors({
@@ -22,7 +33,9 @@ app.use(
       if (!origin || allowedOrigins.includes("*") || allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
-      return callback(new Error(`CORS blocked for origin: ${origin}`));
+      const err = new Error(`CORS blocked for origin: ${origin}`);
+      err.status = 403;
+      return callback(err);
     },
     credentials: true,
     methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],

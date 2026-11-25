@@ -22,27 +22,21 @@
 - [x] **Phase 2:** Image Compression, SHA-256 Seal & Check-In Agent + **Gate 2 PASSED**
 - [x] **Phase 3:** Forensic Visual-Diff Agent, Rate Lookup & Reviewer QA Gate + **Gate 3 PASSED**
 - [x] **Phase 4:** Stateless MCP Server (`/mcp`) & Overdue Cron Job + **Gate 4 PASSED**
-- [ ] **Phase 5:** React Frontend (All 4 Views + Glass-Box Trace + PDF Export) + Gate 5 Verification
+- [x] **Phase 5:** React Frontend (All 4 Views + Glass-Box Trace + PDF Export) + **Gate 5 PASSED**
 - [ ] **Phase 6:** Free-Tier Cloud Deployment (Render + Vercel) + Gate 6 Verification
 - [ ] **Phase 7:** Hackathon Submission Polish (`README.md`, AI Disclosure, Demo Video)
 
 ---
 
 ## Current Phase & Next Action
-- **Current Status:** **Phase 4 / Gate 4 PASSED.**
-  - Built `server/mcp/mcpServer.js` (`buildMcpServer`, `handleMcpRequest` using `@modelcontextprotocol/sdk` `McpServer` + `StreamableHTTPServerTransport` with 3 read-only tools: `list_pending_settlements`, `verify_rental_seal`, `get_forensic_report`) and `server/jobs/overdueJob.js` (`runOverdueScan`, `startOverdueCron` on `"*/15 * * * *"`).
-  - Mounted `POST /mcp`, `POST /api/jobs/run-overdue`, `startOverdueCron()`, and MCP CORS headers (`Content-Type`, `Accept`, `Mcp-Session-Id`, `Authorization`) in `server/server.js`.
-  - Live Gate 4 verified against MongoDB Atlas (`dbState: "connected"`):
-    - `POST /mcp` `tools/list` returned HTTP `200` with all 3 tools (`list_pending_settlements`, `verify_rental_seal`, `get_forensic_report`).
-    - `tools/call` `list_pending_settlements` returned HTTP `200` (`count: 1`, `totalDeduction: 1650`, `reviewerGate.verdict: "PASS"`).
-    - `tools/call` `verify_rental_seal` returned HTTP `200` (`valid: true`, `expectedHash === actualHash` for Sony A6400 demo rental) and `isError: true` cleanly on invalid `rentalId`.
-    - `tools/call` `get_forensic_report` returned HTTP `200`, omitting heavy image base64 arrays (`checkinImages`/`checkoutImages`) while returning `sealVerification.valid: true`, `preExistingIgnored: 1`, `newFindings: 2`, all 4 `agentTrace` steps, and `totalDeduction: 1650`.
-    - `POST /api/jobs/run-overdue` flagged `1` overdue rental (`overdueAlert.flagged: true`) on first run and proved idempotent (`flaggedCount: 0`) on second run.
-    - Hard-rule scan confirmed zero `@google/generative-ai`, `zod-to-json-schema`, `gemini-1.5`, or `gemini-2.5` usage.
-- **Next Action (Phase 5):**
-  - Configure Tailwind v4 in `client/vite.config.js` and `client/src/index.css`.
-  - Build React Frontend (`Navbar`, `Dashboard`, `CheckInPage`, `RentalDetailPage` with `PhotoGrid`, `HashSealCard`, `TracePanel`, `ApprovalQueuePage`, and `utils/pdfReport.js`).
-  - Run Gate 5 Verification (`npm run build` in `/client` exits `0` + full local UI walkthrough).
+- **Current Status:** **Phase 5 / Gate 5 PASSED.**
+  - Built full React + Tailwind v4 frontend (`client/src/api/client.js`, `client/src/utils/pdfReport.js`, `client/src/components/{StatusBadge,Navbar,TracePanel,HashSealCard,PhotoGrid}.jsx`, `client/src/pages/{Dashboard,CheckInPage,RentalDetailPage,ApprovalQueuePage}.jsx`, and `client/src/App.jsx`), plus updated `server/server.js` CORS to allow local dev/preview origins (`5173`/`4173`) and return HTTP `403` on disallowed origins.
+  - Verified `npm run build` in `/content/saboot/client`: exited `0` (`2426` modules transformed in `2.31s`; `dist/assets/` cleanly bundled).
+  - Verified `vite preview` SPA routes (`/`, `/checkin`, `/rentals/test`, `/approvals` -> HTTP `200`) and CORS (`http://localhost:5173`, `http://localhost:4173`, `http://127.0.0.1:5173`, `http://127.0.0.1:4173` -> `200` with `Access-Control-Allow-Origin`; disallowed origin -> `403`).
+  - Verified live E2E flow against MongoDB Atlas + Gemini API (`Check-In 201` -> `verify/tamper/restore` -> `Check-Out 200` with 4 trace stages + fallback + deterministic `totalDeduction=1700` / `refundToRenter=3300` -> `GET /api/settlements/pending` & `PATCH decision APPROVE` `200` `SETTLED` -> `downloadVerdictPdf` generated `9,401` byte PDF).
+- **Next Action (Phase 6 & Phase 7):**
+  - **Phase 6:** Deploy `/server` to Render Free Web Service (`CORS_ORIGIN` updated for Vercel URL) and `/client` to Vercel (`VITE_API_BASE_URL` pointing to Render), then verify live `/health`, `POST /mcp` (`tools/list`), and full Check-In -> Check-Out -> HITL Approval -> PDF download on the public URL (Gate 6).
+  - **Phase 7:** Write `README.md` (problem statement, live URLs, architecture diagram/overview, local setup & `.env.example`, MCP `curl` verification snippet, and mandatory AI Disclosure section) + record demo video.
 
 ---
 
@@ -52,4 +46,5 @@
 - **2026-11-25:** Wired `MONGODB_URI` & `GEMINI_API_KEY` from Colab Secrets; fixed Mongoose `lineItems` sub-schema in `Settlement.js` and `Inspection.js`; passed Gate 1 (`dbState: "connected"`, `51` repair rates + `2` synthetic demo rentals idempotent).
 - **2026-11-25:** Completed Phase 2 (`imagePrep.js`, `geminiClient.js`, `schemas.js`, `checkinAgent.js`, `rentalRoutes.js`, `/api/rentals` mount in `server.js`) and passed Gate 2 Verification cleanly (commit `93c879e`).
 - **2026-11-25:** Completed Phase 3 (`forensicDiffAgent.js`, `rateLookupTool.js`, `reviewerGate.js`, `settlementRoutes.js`, `POST /api/rentals/:id/checkout`, `/api/settlements` mount in `server.js`) and passed Gate 3 Verification cleanly (commit `18eb93f`).
-- **2026-11-25:** Completed Phase 4 (`mcp/mcpServer.js` stateless `/mcp` with 3 read-only forensic tools, `jobs/overdueJob.js` cron + `/api/jobs/run-overdue`, CORS & mounts in `server.js`) and passed Gate 4 Verification cleanly.
+- **2026-11-25:** Completed Phase 4 (`mcp/mcpServer.js` stateless `/mcp` with 3 read-only forensic tools, `jobs/overdueJob.js` cron + `/api/jobs/run-overdue`, CORS & mounts in `server.js`) and passed Gate 4 Verification cleanly (commit `e339b08`).
+- **2026-11-25:** Completed Phase 5 (`client/` API, `pdfReport.js`, 5 components, 4 pages, `App.jsx`, plus `server.js` `4173`/`5173` CORS + `403` blocked response) and passed Gate 5 Verification cleanly.
