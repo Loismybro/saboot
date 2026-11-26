@@ -35,7 +35,7 @@
   - Verified `npm run build` in `/content/saboot/client`: exited `0` (`2863` modules transformed in `1.33s`; `dist/assets/` cleanly bundled).
   - Verified live backend (`dbState: "connected"`), `vite preview` SPA routes (`/`, `/checkin`, `/rentals/test`, `/approvals` -> HTTP `200`), and CORS (`http://localhost:4173` -> `200` with `Access-Control-Allow-Origin`).
 - **Next Action (Phase 6 & Phase 7):**
-  - **Phase 6:** Deploy `/server` to Render Free Web Service (`CORS_ORIGIN` updated for Vercel URL) and `/client` to Vercel (`VITE_API_BASE_URL` pointing to Render), then verify live `/health`, `POST /mcp` (`tools/list`), and full Check-In -> Check-Out -> HITL Approval -> PDF download on the public URL (Gate 6).
+  - **Phase 6:** Deploy on Render using [render.yaml](render.yaml) (Blueprint or Web Service with root `npm run build` / `npm start`, `MONGODB_URI`, and `GEMINI_API_KEY`; optional split Vercel + Render still supported via `VITE_API_BASE_URL` and `CORS_ORIGIN`), then verify live `/health`, `POST /mcp` (`tools/list`), and full Check-In -> Check-Out -> HITL Approval -> PDF download on the public URL (Gate 6).
   - **Phase 7:** Write `README.md` (problem statement, live URLs, architecture diagram/overview, local setup & `.env.example`, MCP `curl` verification snippet, and mandatory AI Disclosure section) + record demo video.
 
 ---
@@ -49,3 +49,4 @@
 - **2026-11-25:** Completed Phase 4 (`mcp/mcpServer.js` stateless `/mcp` with 3 read-only forensic tools, `jobs/overdueJob.js` cron + `/api/jobs/run-overdue`, CORS & mounts in `server.js`) and passed Gate 4 Verification cleanly (commit `e339b08`).
 - **2026-11-25:** Completed Phase 5 (`client/` API, `pdfReport.js`, 5 components, 4 pages, `App.jsx`, plus `server.js` `4173`/`5173` CORS + `403` blocked response) and passed Gate 5 Verification cleanly.
 - **2026-11-26:** Integrated ReactBits components (`ShapeGrid`, `ClickSpark`, `SpotlightCard`, `StarBorder`, `BlurText`, `CountUp`, `DecryptedText`, `ShinyText`) and fixed remaining UI polish items across Navbar, Dashboard, CheckInPage, RentalDetailPage, HashSealCard, PhotoGrid, TracePanel, and ApprovalQueuePage; verified `npm run build` (`2863` modules) and live server + preview routes.
+- **2026-11-26:** Added unified Render deployment support (`package.json`, `render.yaml`, Express static + SPA serving in `server/server.js`, and smart same-origin API base URL resolution in `client/src/api/client.js`); verified `NODE_ENV=production npm run build` and unified `npm start` serving SPA, `/health`, `/api/*`, and `/mcp`.

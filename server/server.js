@@ -1,4 +1,7 @@
 import "dotenv/config";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 import express from "express";
 import cors from "cors";
 import { connectDB, getDbState } from "./config/db.js";
@@ -7,6 +10,11 @@ import rentalRoutes from "./routes/rentalRoutes.js";
 import settlementRoutes from "./routes/settlementRoutes.js";
 import { handleMcpRequest } from "./mcp/mcpServer.js";
 import { runOverdueScan, startOverdueCron } from "./jobs/overdueJob.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const CLIENT_DIST_DIR = path.resolve(__dirname, "../client/dist");
+const CLIENT_INDEX_HTML = path.join(CLIENT_DIST_DIR, "index.html");
 
 const app = express();
 const PORT = Number(process.env.PORT) || 5000;
@@ -20,17 +28,26 @@ const LOCAL_DEV_ORIGINS = [
 
 const envOrigins = (process.env.CORS_ORIGIN || "")
   .split(",")
-  .map((o) => o.trim())
+  .map((o) => o.trim().replace(/\/+$/, ""))
   .filter(Boolean);
 
+const renderOrigin = process.env.RENDER_EXTERNAL_URL
+  ? [process.env.RENDER_EXTERNAL_URL.trim().replace(/\/+$/, "")]
+  : [];
+
 const allowedOrigins = Array.from(
-  new Set([...LOCAL_DEV_ORIGINS, ...envOrigins])
+  new Set([...LOCAL_DEV_ORIGINS, ...envOrigins, ...renderOrigin])
 );
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes("*") || allowedOrigins.includes(origin)) {
+      const normalized = origin ? origin.replace(/\/+$/, "") : "";
+      if (
+        !origin ||
+        allowedOrigins.includes("*") ||
+        allowedOrigins.includes(normalized)
+      ) {
         return callback(null, true);
       }
       const err = new Error(`CORS blocked for origin: ${origin}`);
@@ -60,6 +77,12 @@ app.use("/api/demo", demoRoutes);
 app.use("/api/rentals", rentalRoutes);
 app.use("/api/settlements", settlementRoutes);
 app.post("/mcp", handleMcpRequest);
+app.all("/mcp", (req, res) => {
+  res.status(405).json({
+    ok: false,
+    error: "Use POST /mcp for stateless Streamable HTTP MCP requests.",
+  });
+});
 app.post("/api/jobs/run-overdue", async (req, res, next) => {
   try {
     const result = await runOverdueScan();
@@ -68,6 +91,37 @@ app.post("/api/jobs/run-overdue", async (req, res, next) => {
     next(err);
   }
 });
+
+app.use("/api", (req, res) => {
+  res.status(404).json({
+    ok: false,
+    error: `API route not found: ${req.method} ${req.originalUrl}`,
+  });
+});
+
+if (fs.existsSync(CLIENT_INDEX_HTML)) {
+  app.use(
+    "/assets",
+    express.static(path.join(CLIENT_DIST_DIR, "assets"), { maxAge: "7d" })
+  );
+  app.use(
+    express.static(CLIENT_DIST_DIR, {
+      setHeaders: (res, filePath) => {
+        if (filePath.endsWith("index.html")) {
+          res.setHeader("Cache-Control", "no-cache");
+        }
+      },
+    })
+  );
+
+  app.use((req, res, next) => {
+    if (req.method !== "GET") {
+      return next();
+    }
+    res.setHeader("Cache-Control", "no-cache");
+    return res.sendFile(CLIENT_INDEX_HTML);
+  });
+}
 
 app.use((err, req, res, next) => {
   console.error("[server] Unhandled error:", err);
@@ -88,12 +142,26 @@ app.use((err, req, res, next) => {
   });
 });
 
+function scheduleDbReconnect() {
+  const timer = setInterval(async () => {
+    if (getDbState() === "connected") {
+      clearInterval(timer);
+      return;
+    }
+    await connectDB(1);
+  }, 15000);
+  timer.unref();
+}
+
 async function start() {
-  await connectDB();
-  startOverdueCron();
-  app.listen(PORT, () => {
-    console.log(`[server] Saboot API listening on http://localhost:${PORT}`);
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`[server] Saboot listening on http://0.0.0.0:${PORT}`);
   });
+  const connected = await connectDB();
+  if (!connected && process.env.MONGODB_URI) {
+    scheduleDbReconnect();
+  }
+  startOverdueCron();
 }
 
 start();

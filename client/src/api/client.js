@@ -1,8 +1,25 @@
 import axios from "axios";
 
-export const API_BASE_URL = (
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:5000"
-).replace(/\/+$/, "");
+function resolveApiBaseUrl() {
+  const explicit = import.meta.env.VITE_API_BASE_URL;
+  if (explicit && String(explicit).trim()) {
+    return String(explicit).trim().replace(/\/+$/, "");
+  }
+  if (import.meta.env.DEV) {
+    return "http://localhost:5000";
+  }
+  if (
+    typeof window !== "undefined" &&
+    (window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1") &&
+    (window.location.port === "4173" || window.location.port === "5173")
+  ) {
+    return "http://localhost:5000";
+  }
+  return "";
+}
+
+export const API_BASE_URL = resolveApiBaseUrl();
 
 export const api = axios.create({
   baseURL: API_BASE_URL,

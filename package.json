@@ -1,0 +1,13 @@
+{
+  "name": "saboot",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Saboot — Forensic Visual-Diff Rental Arbitration Agent (Unified Monorepo Scripts for Render)",
+  "scripts": {
+    "build": "npm install --prefix server && npm install --prefix client --include=dev && npm run build --prefix client",
+    "start": "npm start --prefix server"
+  },
+  "engines": {
+    "node": ">=22.12.0 <23.0.0"
+  }
+}
