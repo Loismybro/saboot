@@ -3,7 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { getPendingSettlements } from "./api/client.js";
 import Navbar from "./components/Navbar.jsx";
 import ClickSpark from "./components/reactbits/ClickSpark.jsx";
-import ShapeGrid from "./components/reactbits/ShapeGrid.jsx";
+import MicroSlats from "./components/reactbits/MicroSlats.jsx";
 import ApprovalQueuePage from "./pages/ApprovalQueuePage.jsx";
 import CheckInPage from "./pages/CheckInPage.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
@@ -32,33 +32,44 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <div className="relative min-h-screen bg-slate-950 text-slate-100">
-        {/* Ambient forensic grid backdrop from ReactBits */}
+      <div className="relative min-h-screen bg-black text-slate-100">
+        {/* Full-viewport interactive MicroSlats WebGL background */}
         <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
-          <ShapeGrid
-            shape="square"
-            cellSize={46}
-            speed={0.22}
-            direction="diagonal"
-            lineColor="#1e293b"
-            hoverColor="#10b981"
-            hoverFillColor="#10b981"
-            fillOpacity={0.07}
-            glow={0.25}
-            fade={1}
-            opacity={0.26}
-            clickCascade={false}
+          <MicroSlats
+            preset="swell"
+            color="#085166"
+            glintColor="#7c3aed"
+            backgroundColor="#000000"
+            slatWidth={10}
+            slatHeight={25}
+            gap={3}
+            roundness={0.75}
+            interactive
+            cursorStrength={1}
+            cursorSize={40}
+            swirl={0}
+            trail={1.4}
+            lean={0}
+            intro
+            scale={1.5}
+            speed={0}
+            direction={250}
+            chop={0.55}
+            stretch={0}
+            glint={0.7}
+            contrast={1.25}
+            perspective={0.55}
+            fog={0.35}
+            introDuration={1.5}
+            paused={false}
           />
         </div>
 
         <div className="relative z-10 flex min-h-screen flex-col">
-          <Navbar
-            onSeeded={triggerGlobalRefresh}
-            pendingCount={pendingCount}
-          />
+          <Navbar pendingCount={pendingCount} />
 
           <ClickSpark
-            sparkColor={["#34d399", "#38bdf8"]}
+            sparkColor={["#34d399", "#7c3aed"]}
             sparkCount={6}
             sparkRadius={18}
             sparkSize={9}

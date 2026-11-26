@@ -4,16 +4,10 @@ import {
   Check,
   Copy,
   Loader2,
-  RotateCcw,
   ShieldAlert,
   ShieldCheck,
-  Terminal,
 } from "lucide-react";
-import {
-  restoreRentalSeal,
-  simulateRentalTamper,
-  verifyRentalHash,
-} from "../api/client.js";
+import { verifyRentalHash } from "../api/client.js";
 import DecryptedText from "./reactbits/DecryptedText.jsx";
 import SpotlightCard from "./reactbits/SpotlightCard.jsx";
 import StatusBadge from "./StatusBadge.jsx";
@@ -25,7 +19,7 @@ export function HashSealCard({
   onUpdated,
 }) {
   const [verification, setVerification] = useState(sealVerification || null);
-  const [busyAction, setBusyAction] = useState("");
+  const [verifying, setVerifying] = useState(false);
   const [error, setError] = useState("");
   const [verifySeq, setVerifySeq] = useState(0);
   const [copied, setCopied] = useState(false);
@@ -50,51 +44,32 @@ export function HashSealCard({
     }
   }
 
-  async function runAction(actionType) {
-    if (!rentalId || busyAction) return;
-    setBusyAction(actionType);
+  async function handleVerify() {
+    if (!rentalId || verifying) return;
+    setVerifying(true);
     setError("");
     try {
-      let res;
-      if (actionType === "verify") {
-        res = await verifyRentalHash(rentalId);
-        setVerification(res);
-        setVerifySeq((s) => s + 1);
-        onUpdated?.({ type: "verify", sealVerification: res });
-      } else if (actionType === "tamper") {
-        res = await simulateRentalTamper(rentalId);
-        setVerification(res.sealVerification);
-        setVerifySeq((s) => s + 1);
-        onUpdated?.({
-          type: "tamper",
-          rental: res.rental,
-          sealVerification: res.sealVerification,
-        });
-      } else if (actionType === "restore") {
-        res = await restoreRentalSeal(rentalId);
-        setVerification(res.sealVerification);
-        setVerifySeq((s) => s + 1);
-        onUpdated?.({
-          type: "restore",
-          rental: res.rental,
-          sealVerification: res.sealVerification,
-        });
-      }
+      const res = await verifyRentalHash(rentalId);
+      setVerification(res);
+      setVerifySeq((s) => s + 1);
+      onUpdated?.({ type: "verify", sealVerification: res });
     } catch (err) {
-      setError(err?.message || "Hash seal operation failed.");
+      setError(err?.message || "Hash seal verification failed.");
     } finally {
-      setBusyAction("");
+      setVerifying(false);
     }
   }
 
   return (
     <SpotlightCard
       spotlightColor={isValid === false ? "#fb7185" : "#34d399"}
-      surfaceColor={isValid === false ? "rgba(76, 5, 25, 0.25)" : "#0f172a"}
+      surfaceColor={
+        isValid === false ? "rgba(76, 5, 25, 0.35)" : "rgba(9, 14, 28, 0.82)"
+      }
       borderColor={
         isValid === false
           ? "rgba(244, 63, 94, 0.5)"
-          : "rgba(30, 41, 59, 0.95)"
+          : "rgba(51, 65, 85, 0.65)"
       }
       intensity={0.12}
       className="rounded-2xl p-5"
@@ -221,44 +196,16 @@ export function HashSealCard({
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <button
           type="button"
-          onClick={() => runAction("verify")}
-          disabled={Boolean(busyAction)}
+          onClick={handleVerify}
+          disabled={verifying}
           className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/35 bg-emerald-500/15 px-3 py-1.5 text-xs font-semibold text-emerald-300 hover:bg-emerald-500/25 disabled:opacity-50 transition-colors cursor-pointer"
         >
-          {busyAction === "verify" ? (
+          {verifying ? (
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
           ) : (
             <ShieldCheck className="h-3.5 w-3.5" />
           )}
-          <span>Verify SHA-256</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => runAction("tamper")}
-          disabled={Boolean(busyAction)}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-rose-500/35 bg-rose-500/10 px-3 py-1.5 text-xs font-semibold text-rose-300 hover:bg-rose-500/20 disabled:opacity-50 transition-colors cursor-pointer"
-        >
-          {busyAction === "tamper" ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          ) : (
-            <Terminal className="h-3.5 w-3.5" />
-          )}
-          <span>Simulate DB Tamper</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => runAction("restore")}
-          disabled={Boolean(busyAction)}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-200 hover:bg-slate-700 disabled:opacity-50 transition-colors cursor-pointer"
-        >
-          {busyAction === "restore" ? (
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          ) : (
-            <RotateCcw className="h-3.5 w-3.5" />
-          )}
-          <span>Restore Seal</span>
+          <span>{verifying ? "Verifying..." : "Verify SHA-256"}</span>
         </button>
       </div>
     </SpotlightCard>

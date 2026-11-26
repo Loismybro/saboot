@@ -249,8 +249,8 @@ export default function ApprovalQueuePage({ refreshKey = 0, onDataChanged }) {
             No settlements in this filter
           </h2>
           <p className="mt-1 text-xs text-slate-400">
-            Run Check-Out on a rental or click &ldquo;Seed Demo Rentals&rdquo;
-            to populate an active settlement.
+            Complete a rental Check-Out inspection to generate a settlement for
+            review.
           </p>
         </div>
       ) : (

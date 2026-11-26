@@ -71,13 +71,8 @@ export async function getHealth() {
   return data;
 }
 
-export async function seedDemoData() {
-  const { data } = await api.post("/api/demo/seed");
-  return data;
-}
-
 export async function getRepairRates() {
-  const { data } = await api.get("/api/demo/rates");
+  const { data } = await api.get("/api/rates");
   return data;
 }
 
@@ -121,16 +116,6 @@ export async function checkOutRental(id, photosOrFormData) {
 
 export async function verifyRentalHash(id) {
   const { data } = await api.get(`/api/rentals/${id}/verify-hash`);
-  return data;
-}
-
-export async function simulateRentalTamper(id) {
-  const { data } = await api.post(`/api/rentals/${id}/simulate-tamper`);
-  return data;
-}
-
-export async function restoreRentalSeal(id) {
-  const { data } = await api.post(`/api/rentals/${id}/restore-seal`);
   return data;
 }
 

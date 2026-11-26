@@ -4,9 +4,9 @@ import { useEffect, useRef } from 'react';
 
 const THEMES = {
   dark: {
-    surface: '#0f172a',
-    border: 'rgba(30, 41, 59, 0.95)',
-    shadow: '0 24px 48px -24px rgba(0, 0, 0, 0.6)',
+    surface: 'rgba(9, 14, 28, 0.82)',
+    border: 'rgba(51, 65, 85, 0.65)',
+    shadow: '0 24px 48px -24px rgba(0, 0, 0, 0.75)',
     light: '#34d399',
     fill: 1,
     edge: 1
@@ -45,7 +45,7 @@ const falloff = (color, softness) => {
 };
 
 const CARD =
-  'relative isolate overflow-hidden [background-color:var(--spotlight-card-surface)] [box-shadow:var(--spotlight-card-shadow)]';
+  'relative isolate overflow-hidden backdrop-blur-md [background-color:var(--spotlight-card-surface)] [box-shadow:var(--spotlight-card-shadow)]';
 
 const SpotlightCard = ({
   children,

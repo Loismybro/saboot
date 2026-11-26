@@ -7,7 +7,6 @@ import {
   Camera,
   CheckCircle2,
   FileDown,
-  ImagePlus,
   Loader2,
   PackageCheck,
   ShieldAlert,
@@ -43,157 +42,6 @@ function formatDate(value) {
         hour: "2-digit",
         minute: "2-digit",
       });
-}
-
-function createSampleDamagedReturnFile(rental) {
-  return new Promise((resolve, reject) => {
-    const canvas = document.createElement("canvas");
-    canvas.width = 960;
-    canvas.height = 600;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) {
-      reject(new Error("Canvas 2D context unavailable."));
-      return;
-    }
-
-    const category = rental?.category || "general";
-    const missingAcc =
-      rental?.baselineSeal?.accessoriesPresent?.[0] ||
-      (category === "camera"
-        ? "lens cap"
-        : category === "bike_gear"
-        ? "visor"
-        : category === "pg_room"
-        ? "key"
-        : "charger");
-
-    ctx.fillStyle = "#0f172a";
-    ctx.fillRect(0, 0, 960, 600);
-
-    if (category === "camera") {
-      // Camera body matching synthetic Sony A6400 layout
-      ctx.fillStyle = "#1e293b";
-      ctx.strokeStyle = "#475569";
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.roundRect(70, 90, 500, 340, 28);
-      ctx.fill();
-      ctx.stroke();
-
-      // Lens circle
-      ctx.fillStyle = "#020617";
-      ctx.strokeStyle = "#94a3b8";
-      ctx.lineWidth = 8;
-      ctx.beginPath();
-      ctx.arc(320, 260, 105, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-
-      // Same pre-existing top-left corner scuff
-      ctx.strokeStyle = "#fbbf24";
-      ctx.lineWidth = 5;
-      ctx.lineCap = "round";
-      ctx.beginPath();
-      ctx.moveTo(105, 130);
-      ctx.lineTo(165, 148);
-      ctx.stroke();
-      ctx.fillStyle = "#fbbf24";
-      ctx.font = "bold 16px sans-serif";
-      ctx.fillText("PRE-EXISTING CORNER SCUFF", 90, 75);
-
-      // New scratch/crack across center lens glass
-      ctx.strokeStyle = "#f43f5e";
-      ctx.lineWidth = 8;
-      ctx.beginPath();
-      ctx.moveTo(260, 210);
-      ctx.lineTo(380, 310);
-      ctx.stroke();
-      ctx.fillStyle = "#fb7185";
-      ctx.font = "bold 18px sans-serif";
-      ctx.fillText("NEW LENS SCRATCH / CRACK", 205, 405);
-    } else {
-      // General/laptop/helmet/room layout matching CheckInPage sample
-      ctx.fillStyle = "#1e293b";
-      ctx.strokeStyle = "#475569";
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.roundRect(70, 90, 500, 340, 22);
-      ctx.fill();
-      ctx.stroke();
-
-      ctx.fillStyle = "#020617";
-      ctx.beginPath();
-      ctx.roundRect(105, 125, 430, 270, 12);
-      ctx.fill();
-
-      // Same pre-existing top-left corner scuff
-      ctx.strokeStyle = "#fbbf24";
-      ctx.lineWidth = 5;
-      ctx.lineCap = "round";
-      ctx.beginPath();
-      ctx.moveTo(95, 115);
-      ctx.lineTo(155, 132);
-      ctx.stroke();
-      ctx.fillStyle = "#fbbf24";
-      ctx.font = "bold 18px sans-serif";
-      ctx.fillText("PRE-EXISTING CORNER SCUFF", 85, 75);
-
-      // Clearly visible NEW damage scratch & mark on center surface
-      ctx.strokeStyle = "#f43f5e";
-      ctx.lineWidth = 8;
-      ctx.beginPath();
-      ctx.moveTo(205, 220);
-      ctx.lineTo(420, 295);
-      ctx.stroke();
-      ctx.fillStyle = "#f43f5e";
-      ctx.beginPath();
-      ctx.roundRect(215, 315, 230, 44, 8);
-      ctx.fill();
-      ctx.fillStyle = "#ffffff";
-      ctx.font = "bold 17px sans-serif";
-      ctx.fillText("NEW CENTER SCRATCH", 232, 343);
-    }
-
-    // Missing accessory outline on right
-    ctx.fillStyle = "#0f172a";
-    ctx.strokeStyle = "#f43f5e";
-    ctx.lineWidth = 4;
-    ctx.setLineDash([10, 8]);
-    ctx.beginPath();
-    ctx.roundRect(620, 150, 260, 210, 18);
-    ctx.fill();
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    ctx.fillStyle = "#fb7185";
-    ctx.font = "bold 20px sans-serif";
-    ctx.fillText(`${missingAcc.toUpperCase()}`, 645, 245);
-    ctx.fillText("MISSING AT RETURN", 645, 278);
-
-    ctx.fillStyle = "#94a3b8";
-    ctx.font = "18px monospace";
-    ctx.fillText(
-      `CHECK-OUT RETURN SAMPLE | ${(rental?.title || "RENTAL ITEM").slice(0, 32)}`,
-      70,
-      515
-    );
-
-    canvas.toBlob(
-      (blob) => {
-        if (!blob) {
-          reject(new Error("Failed to encode damaged sample image."));
-          return;
-        }
-        resolve(
-          new File([blob], "sample-checkout-damaged.png", {
-            type: "image/png",
-          })
-        );
-      },
-      "image/png",
-      0.92
-    );
-  });
 }
 
 export default function RentalDetailPage({ refreshKey = 0, onDataChanged }) {
@@ -266,27 +114,11 @@ export default function RentalDetailPage({ refreshKey = 0, onDataChanged }) {
     });
   }
 
-  async function handleAttachSampleDamaged() {
-    setCheckoutError("");
-    if (checkoutFiles.length >= 4) {
-      setCheckoutError("Maximum 4 check-out photos already attached.");
-      return;
-    }
-    try {
-      const file = await createSampleDamagedReturnFile(rental);
-      addCheckoutFiles([file]);
-    } catch (err) {
-      setCheckoutError(err?.message || "Failed to generate sample return photo.");
-    }
-  }
-
   async function handleRunCheckout(e) {
     e.preventDefault();
     if (checkoutBusy || !rental) return;
     if (checkoutFiles.length === 0) {
-      setCheckoutError(
-        'Upload at least 1 Check-Out photo (or click "Attach Sample Damaged Return Photo").'
-      );
+      setCheckoutError("Please upload at least 1 Check-Out return photo.");
       return;
     }
 
@@ -314,9 +146,6 @@ export default function RentalDetailPage({ refreshKey = 0, onDataChanged }) {
     if (event?.sealVerification) {
       setSealVerification(event.sealVerification);
     }
-    if (event?.type === "tamper" || event?.type === "restore") {
-      onDataChanged?.();
-    }
   }
 
   if (loading) {
@@ -331,7 +160,7 @@ export default function RentalDetailPage({ refreshKey = 0, onDataChanged }) {
   if (loadError || !rental) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-12">
-        <div className="rounded-2xl border border-rose-500/40 bg-rose-500/10 p-6 text-center">
+        <div className="rounded-2xl border border-rose-500/40 bg-rose-500/10 p-6 text-center backdrop-blur-md">
           <ShieldAlert className="mx-auto h-8 w-8 text-rose-400" />
           <h2 className="mt-3 text-lg font-semibold text-white">
             Unable to load rental
@@ -529,7 +358,7 @@ export default function RentalDetailPage({ refreshKey = 0, onDataChanged }) {
           {/* Green Card: Pre-Existing Flaws Ignored (₹0) */}
           <SpotlightCard
             spotlightColor="#10b981"
-            surfaceColor="rgba(2, 44, 34, 0.25)"
+            surfaceColor="rgba(2, 44, 34, 0.35)"
             borderColor="rgba(16, 185, 129, 0.35)"
             intensity={0.12}
             className="rounded-2xl p-5"
@@ -601,13 +430,13 @@ export default function RentalDetailPage({ refreshKey = 0, onDataChanged }) {
             }
             surfaceColor={
               lineItems.length > 0 || newFindings.length > 0
-                ? "rgba(76, 5, 25, 0.2)"
-                : "#0f172a"
+                ? "rgba(76, 5, 25, 0.3)"
+                : "rgba(9, 14, 28, 0.82)"
             }
             borderColor={
               lineItems.length > 0 || newFindings.length > 0
                 ? "rgba(244, 63, 94, 0.4)"
-                : "rgba(30, 41, 59, 0.95)"
+                : "rgba(51, 65, 85, 0.65)"
             }
             intensity={0.12}
             className="rounded-2xl p-5"
@@ -767,25 +596,15 @@ export default function RentalDetailPage({ refreshKey = 0, onDataChanged }) {
                   <span className="text-xs text-slate-400">
                     Selected: {checkoutFiles.length}/4 photo(s)
                   </span>
-                  <div className="flex items-center gap-2">
-                    {checkoutFiles.length > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => setCheckoutFiles([])}
-                        className="rounded-lg border border-slate-700 bg-slate-950 px-2 py-1.5 text-xs text-slate-400 hover:text-white cursor-pointer"
-                      >
-                        Clear
-                      </button>
-                    )}
+                  {checkoutFiles.length > 0 && (
                     <button
                       type="button"
-                      onClick={handleAttachSampleDamaged}
-                      className="inline-flex items-center gap-1.5 rounded-lg border border-rose-500/35 bg-rose-500/10 px-2.5 py-1.5 text-xs font-semibold text-rose-300 hover:bg-rose-500/20 transition-colors cursor-pointer"
+                      onClick={() => setCheckoutFiles([])}
+                      className="rounded-lg border border-slate-700 bg-slate-950 px-2 py-1 text-xs text-slate-400 hover:text-white cursor-pointer"
                     >
-                      <ImagePlus className="h-3.5 w-3.5" />
-                      <span>Attach Sample Damaged Return Photo</span>
+                      Clear
                     </button>
-                  </div>
+                  )}
                 </div>
 
                 <label

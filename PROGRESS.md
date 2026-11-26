@@ -12,7 +12,7 @@
 - **Target Hackathon:** Homingo Hack Days 2026 (`hackathon.homingo.co.in`, Track 1: AI Agents, deadline Dec 6, 2026)
 - **Repo Path:** `/content/saboot`
 - **GitHub Remote:** `https://github.com/Loismybro/saboot`
-- **Live Deployments:** *(Pending Phase 6)*
+- **Live Deployments:** `https://saboot-q3lt.onrender.com/` (Render Unified Web Service)
 
 ---
 
@@ -50,3 +50,4 @@
 - **2026-11-25:** Completed Phase 5 (`client/` API, `pdfReport.js`, 5 components, 4 pages, `App.jsx`, plus `server.js` `4173`/`5173` CORS + `403` blocked response) and passed Gate 5 Verification cleanly.
 - **2026-11-26:** Integrated ReactBits components (`ShapeGrid`, `ClickSpark`, `SpotlightCard`, `StarBorder`, `BlurText`, `CountUp`, `DecryptedText`, `ShinyText`) and fixed remaining UI polish items across Navbar, Dashboard, CheckInPage, RentalDetailPage, HashSealCard, PhotoGrid, TracePanel, and ApprovalQueuePage; verified `npm run build` (`2863` modules) and live server + preview routes.
 - **2026-11-26:** Added unified Render deployment support (`package.json`, `render.yaml`, Express static + SPA serving in `server/server.js`, and smart same-origin API base URL resolution in `client/src/api/client.js`); verified `NODE_ENV=production npm run build` and unified `npm start` serving SPA, `/health`, `/api/*`, and `/mcp`.
+- **2026-11-26:** Replaced `ShapeGrid` with full-viewport interactive ReactBits `MicroSlats` WebGL background (`ogl`), removed all demo/sample/tamper-simulation UI elements and prefilled demo strings, cleaned all personal test and synthetic demo rentals from MongoDB Atlas (preserving 51 `repair_rates`), and added clean `GET /api/rates` + auto-seed rates on startup.

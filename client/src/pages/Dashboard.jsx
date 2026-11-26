@@ -10,7 +10,6 @@ import {
   Radar,
   ReceiptIndianRupee,
   Search,
-  ShieldAlert,
   ShieldCheck,
   X,
 } from "lucide-react";
@@ -91,12 +90,10 @@ export default function Dashboard({ refreshKey = 0, onDataChanged }) {
     loadRentals();
   }, [loadRentals, refreshKey]);
 
-  // Invalidate cached rates when global data changes (e.g., after seeding)
   useEffect(() => {
     setRates([]);
   }, [refreshKey]);
 
-  // Close Repair Rates modal on Escape key
   useEffect(() => {
     if (!ratesOpen) return undefined;
     function onKeyDown(e) {
@@ -201,7 +198,7 @@ export default function Dashboard({ refreshKey = 0, onDataChanged }) {
           <button
             type="button"
             onClick={handleOpenRatesModal}
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900/90 px-3.5 py-2 text-xs font-semibold text-slate-200 hover:border-slate-600 hover:bg-slate-800 transition-colors cursor-pointer"
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900/85 px-3.5 py-2 text-xs font-semibold text-slate-200 hover:border-slate-600 hover:bg-slate-800 transition-colors cursor-pointer"
           >
             <ReceiptIndianRupee className="h-4 w-4 text-emerald-400" />
             <span>View Repair Rates</span>
@@ -239,7 +236,7 @@ export default function Dashboard({ refreshKey = 0, onDataChanged }) {
         </div>
       </div>
 
-      {/* Stat Cards with ReactBits SpotlightCard + CountUp */}
+      {/* Stat Cards */}
       <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <SpotlightCard
           spotlightColor="#94a3b8"
@@ -296,12 +293,14 @@ export default function Dashboard({ refreshKey = 0, onDataChanged }) {
         <SpotlightCard
           spotlightColor="#f59e0b"
           surfaceColor={
-            stats.overdueCount > 0 ? "rgba(69, 26, 3, 0.35)" : "#0f172a"
+            stats.overdueCount > 0
+              ? "rgba(69, 26, 3, 0.45)"
+              : "rgba(9, 14, 28, 0.82)"
           }
           borderColor={
             stats.overdueCount > 0
               ? "rgba(245, 158, 11, 0.45)"
-              : "rgba(30, 41, 59, 0.95)"
+              : "rgba(51, 65, 85, 0.65)"
           }
           intensity={0.16}
           className="rounded-2xl p-4"
@@ -319,7 +318,7 @@ export default function Dashboard({ refreshKey = 0, onDataChanged }) {
 
       {/* Filter & Search Bar */}
       {rentals.length > 0 && (
-        <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-800/90 bg-slate-900/70 px-4 py-3 backdrop-blur-sm">
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-800/80 bg-slate-950/75 px-4 py-3 backdrop-blur-md">
           <div className="flex flex-wrap items-center gap-1.5">
             {STATUS_FILTERS.map((f) => (
               <button
@@ -361,7 +360,7 @@ export default function Dashboard({ refreshKey = 0, onDataChanged }) {
       )}
 
       {scanMessage && (
-        <div className="mt-4 flex items-center justify-between rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2.5 text-xs text-emerald-200">
+        <div className="mt-4 flex items-center justify-between rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2.5 text-xs text-emerald-200 backdrop-blur-sm">
           <span>{scanMessage}</span>
           <button
             type="button"
@@ -374,7 +373,7 @@ export default function Dashboard({ refreshKey = 0, onDataChanged }) {
       )}
 
       {error && (
-        <div className="mt-4 rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+        <div className="mt-4 rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm text-rose-200 backdrop-blur-sm">
           {error}
         </div>
       )}
@@ -386,17 +385,18 @@ export default function Dashboard({ refreshKey = 0, onDataChanged }) {
           <span>Loading sealed rentals...</span>
         </div>
       ) : rentals.length === 0 ? (
-        <div className="mt-8 rounded-2xl border border-dashed border-slate-800 bg-slate-900/60 p-10 text-center">
-          <ShieldCheck className="mx-auto h-10 w-10 text-emerald-400/70" />
+        <SpotlightCard
+          spotlightColor="#34d399"
+          intensity={0.1}
+          className="mt-8 rounded-2xl p-10 text-center"
+        >
+          <ShieldCheck className="mx-auto h-10 w-10 text-emerald-400/80" />
           <h2 className="mt-3 text-lg font-semibold text-white">
             No rentals sealed yet
           </h2>
-          <p className="mt-1 text-sm text-slate-400">
-            Click{" "}
-            <span className="font-semibold text-emerald-300">
-              Seed Demo Rentals
-            </span>{" "}
-            in the top bar for instant synthetic data, or start a new Check-In.
+          <p className="mx-auto mt-1 max-w-md text-sm text-slate-400">
+            Start a new Check-In to inspect condition photos, catalog existing
+            flaws and accessories, and seal the baseline with SHA-256.
           </p>
           <div className="mt-5 flex justify-center">
             <Link
@@ -407,9 +407,9 @@ export default function Dashboard({ refreshKey = 0, onDataChanged }) {
               <span>Create First Check-In</span>
             </Link>
           </div>
-        </div>
+        </SpotlightCard>
       ) : filteredRentals.length === 0 ? (
-        <div className="mt-8 rounded-2xl border border-dashed border-slate-800 bg-slate-900/60 p-8 text-center">
+        <div className="mt-8 rounded-2xl border border-dashed border-slate-800 bg-slate-950/70 p-8 text-center backdrop-blur-md">
           <p className="text-sm font-medium text-slate-300">
             No rentals match the current filter.
           </p>
@@ -433,7 +433,7 @@ export default function Dashboard({ refreshKey = 0, onDataChanged }) {
               : "unsealed";
             const isOverdue = Boolean(rental.overdueAlert?.flagged);
             const cardSpotlight =
-              rental.tamperActive || rental.status === "DISPUTED"
+              rental.status === "DISPUTED"
                 ? "#fb7185"
                 : rental.status === "UNDER_REVIEW" || isOverdue
                 ? "#fbbf24"
@@ -454,7 +454,7 @@ export default function Dashboard({ refreshKey = 0, onDataChanged }) {
                   className="flex h-full flex-col"
                 >
                   {/* Thumbnail */}
-                  <div className="relative h-44 w-full overflow-hidden border-b border-slate-800 bg-slate-950">
+                  <div className="relative h-44 w-full overflow-hidden border-b border-slate-800 bg-slate-950/90">
                     {thumb?.base64 ? (
                       <img
                         src={`data:${thumb.mimeType || "image/webp"};base64,${thumb.base64}`}
@@ -493,15 +493,6 @@ export default function Dashboard({ refreshKey = 0, onDataChanged }) {
                       </div>
                     )}
 
-                    {rental.tamperActive && (
-                      <div className="mb-3 flex items-center gap-2 rounded-lg border border-rose-500/40 bg-rose-500/10 px-2.5 py-1.5 text-[11px] text-rose-200">
-                        <ShieldAlert className="h-3.5 w-3.5 shrink-0 text-rose-400" />
-                        <span className="font-semibold">
-                          Active DB Tamper Simulation
-                        </span>
-                      </div>
-                    )}
-
                     <h2 className="text-base font-semibold text-white group-hover:text-emerald-300 transition-colors line-clamp-1">
                       {rental.title}
                     </h2>
@@ -515,7 +506,7 @@ export default function Dashboard({ refreshKey = 0, onDataChanged }) {
                       </span>
                     </p>
 
-                    <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl border border-slate-800 bg-slate-950/70 p-2.5 text-xs">
+                    <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl border border-slate-800 bg-slate-950/75 p-2.5 text-xs">
                       <div>
                         <span className="text-[10px] uppercase tracking-wider text-slate-500">
                           Deposit Held
@@ -539,13 +530,7 @@ export default function Dashboard({ refreshKey = 0, onDataChanged }) {
                     </div>
 
                     <div className="mt-auto flex items-center justify-between pt-4 text-xs">
-                      <span
-                        className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 font-mono text-[11px] ${
-                          rental.tamperActive
-                            ? "border-rose-500/35 bg-rose-500/10 text-rose-300"
-                            : "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
-                        }`}
-                      >
+                      <span className="inline-flex items-center gap-1 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 font-mono text-[11px] text-emerald-300">
                         <ShieldCheck className="h-3 w-3" />
                         {shortHash}
                       </span>
@@ -630,8 +615,7 @@ export default function Dashboard({ refreshKey = 0, onDataChanged }) {
                 </p>
               ) : filteredRates.length === 0 ? (
                 <p className="text-center text-sm text-slate-400">
-                  No repair rates found. Click &ldquo;Seed Demo Rentals&rdquo; to
-                  seed benchmark rates.
+                  No repair benchmark rates available in this category.
                 </p>
               ) : (
                 <div className="overflow-x-auto">

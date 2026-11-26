@@ -5,6 +5,8 @@ import { fileURLToPath } from "url";
 import express from "express";
 import cors from "cors";
 import { connectDB, getDbState } from "./config/db.js";
+import { RepairRate } from "./models/RepairRate.js";
+import { ensureRepairRatesSeeded } from "./seed/seedData.js";
 import demoRoutes from "./routes/demoRoutes.js";
 import rentalRoutes from "./routes/rentalRoutes.js";
 import settlementRoutes from "./routes/settlementRoutes.js";
@@ -73,6 +75,14 @@ app.get("/health", (req, res) => {
   });
 });
 
+app.get("/api/rates", async (req, res, next) => {
+  try {
+    const rates = await RepairRate.find().sort({ category: 1, itemKeyword: 1 });
+    res.json({ ok: true, count: rates.length, rates });
+  } catch (err) {
+    next(err);
+  }
+});
 app.use("/api/demo", demoRoutes);
 app.use("/api/rentals", rentalRoutes);
 app.use("/api/settlements", settlementRoutes);
@@ -148,7 +158,12 @@ function scheduleDbReconnect() {
       clearInterval(timer);
       return;
     }
-    await connectDB(1);
+    const ok = await connectDB(1);
+    if (ok) {
+      ensureRepairRatesSeeded().catch((err) =>
+        console.warn("[seed] Auto-seed rates skipped:", err.message)
+      );
+    }
   }, 15000);
   timer.unref();
 }
@@ -158,7 +173,11 @@ async function start() {
     console.log(`[server] Saboot listening on http://0.0.0.0:${PORT}`);
   });
   const connected = await connectDB();
-  if (!connected && process.env.MONGODB_URI) {
+  if (connected) {
+    ensureRepairRatesSeeded().catch((err) =>
+      console.warn("[seed] Auto-seed rates skipped:", err.message)
+    );
+  } else if (process.env.MONGODB_URI) {
     scheduleDbReconnect();
   }
   startOverdueCron();

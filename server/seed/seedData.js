@@ -135,6 +135,30 @@ function makeLaptopSvg({ showNewMark = false, missingCharger = false }) {
   </svg>`;
 }
 
+export async function ensureRepairRatesSeeded() {
+  const count = await RepairRate.countDocuments();
+  if (count > 0) {
+    return { repairRatesTotal: count, repairRatesUpserted: 0 };
+  }
+  const rateOps = REPAIR_RATES_SEED.map((rate) => ({
+    updateOne: {
+      filter: {
+        category: rate.category,
+        itemKeyword: rate.itemKeyword,
+        severity: rate.severity,
+      },
+      update: { $set: rate },
+      upsert: true,
+    },
+  }));
+  const rateBulkResult = await RepairRate.bulkWrite(rateOps);
+  const totalRates = await RepairRate.countDocuments();
+  return {
+    repairRatesTotal: totalRates,
+    repairRatesUpserted: rateBulkResult.upsertedCount,
+  };
+}
+
 export async function runSeedData() {
   const rateOps = REPAIR_RATES_SEED.map((rate) => ({
     updateOne: {
