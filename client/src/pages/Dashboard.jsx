@@ -9,6 +9,7 @@ import {
   PlusCircle,
   Radar,
   ReceiptIndianRupee,
+  Search,
   ShieldAlert,
   ShieldCheck,
   X,
@@ -18,6 +19,10 @@ import {
   listRentals,
   runOverdueScan,
 } from "../api/client.js";
+import BlurText from "../components/reactbits/BlurText.jsx";
+import CountUp from "../components/reactbits/CountUp.jsx";
+import SpotlightCard from "../components/reactbits/SpotlightCard.jsx";
+import StarBorder from "../components/reactbits/StarBorder.jsx";
 import StatusBadge from "../components/StatusBadge.jsx";
 
 function formatInr(value) {
@@ -45,12 +50,23 @@ const CATEGORY_LABELS = {
   general: "General",
 };
 
+const STATUS_FILTERS = [
+  { id: "ALL", label: "All" },
+  { id: "CHECKED_IN", label: "Checked In" },
+  { id: "UNDER_REVIEW", label: "Under Review" },
+  { id: "SETTLED", label: "Settled" },
+  { id: "DISPUTED", label: "Disputed" },
+];
+
 export default function Dashboard({ refreshKey = 0, onDataChanged }) {
   const [rentals, setRentals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [scanning, setScanning] = useState(false);
   const [scanMessage, setScanMessage] = useState("");
+
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const [ratesOpen, setRatesOpen] = useState(false);
   const [ratesLoading, setRatesLoading] = useState(false);
@@ -75,6 +91,23 @@ export default function Dashboard({ refreshKey = 0, onDataChanged }) {
     loadRentals();
   }, [loadRentals, refreshKey]);
 
+  // Invalidate cached rates when global data changes (e.g., after seeding)
+  useEffect(() => {
+    setRates([]);
+  }, [refreshKey]);
+
+  // Close Repair Rates modal on Escape key
+  useEffect(() => {
+    if (!ratesOpen) return undefined;
+    function onKeyDown(e) {
+      if (e.key === "Escape") {
+        setRatesOpen(false);
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [ratesOpen]);
+
   const stats = useMemo(() => {
     const total = rentals.length;
     const checkedIn = rentals.filter((r) => r.status === "CHECKED_IN").length;
@@ -87,6 +120,20 @@ export default function Dashboard({ refreshKey = 0, onDataChanged }) {
 
     return { total, checkedIn, underReview, totalDeposit, overdueCount };
   }, [rentals]);
+
+  const filteredRentals = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return rentals.filter((r) => {
+      if (statusFilter !== "ALL" && r.status !== statusFilter) return false;
+      if (!q) return true;
+      return (
+        String(r.title || "").toLowerCase().includes(q) ||
+        String(r.ownerName || "").toLowerCase().includes(q) ||
+        String(r.renterName || "").toLowerCase().includes(q) ||
+        String(r.category || "").toLowerCase().includes(q)
+      );
+    });
+  }, [rentals, statusFilter, searchQuery]);
 
   const filteredRates = useMemo(() => {
     if (rateCategoryFilter === "ALL") return rates;
@@ -117,7 +164,6 @@ export default function Dashboard({ refreshKey = 0, onDataChanged }) {
 
   async function handleOpenRatesModal() {
     setRatesOpen(true);
-    if (rates.length > 0) return;
     setRatesLoading(true);
     setRatesError("");
     try {
@@ -135,9 +181,16 @@ export default function Dashboard({ refreshKey = 0, onDataChanged }) {
       {/* Header & Quick Actions */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-white">
-            Rental Custody Dashboard
-          </h1>
+          <BlurText
+            as="h1"
+            text="Rental Custody Dashboard"
+            delay={65}
+            stepDuration={0.32}
+            blur={8}
+            distance={20}
+            trigger="load"
+            className="text-2xl font-bold tracking-tight text-white sm:text-3xl"
+          />
           <p className="mt-1 text-sm text-slate-400">
             SHA-256 sealed Check-In baselines, live forensic visual diffs, and
             overdue custody alerts.
@@ -148,7 +201,7 @@ export default function Dashboard({ refreshKey = 0, onDataChanged }) {
           <button
             type="button"
             onClick={handleOpenRatesModal}
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-3.5 py-2 text-xs font-semibold text-slate-200 hover:border-slate-600 hover:bg-slate-800 transition-colors cursor-pointer"
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-700 bg-slate-900/90 px-3.5 py-2 text-xs font-semibold text-slate-200 hover:border-slate-600 hover:bg-slate-800 transition-colors cursor-pointer"
           >
             <ReceiptIndianRupee className="h-4 w-4 text-emerald-400" />
             <span>View Repair Rates</span>
@@ -168,54 +221,90 @@ export default function Dashboard({ refreshKey = 0, onDataChanged }) {
             <span>{scanning ? "Scanning..." : "Run Overdue Scan"}</span>
           </button>
 
-          <Link
+          <StarBorder
+            as={Link}
             to="/checkin"
-            className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-4 py-2 text-xs font-semibold text-slate-950 hover:bg-emerald-400 transition-colors"
+            color="#34d399"
+            trailColor="#10b981"
+            backgroundColor="#10b981"
+            textColor="#020617"
+            borderColor="rgba(52, 211, 153, 0.55)"
+            radius={12}
+            duration={3.8}
+            className="px-4 py-2 text-xs font-semibold hover:brightness-110 transition-all"
           >
             <PlusCircle className="h-4 w-4" />
             <span>New Check-In</span>
-          </Link>
+          </StarBorder>
         </div>
       </div>
 
-      {/* Stat Cards */}
+      {/* Stat Cards with ReactBits SpotlightCard + CountUp */}
       <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
+        <SpotlightCard
+          spotlightColor="#94a3b8"
+          intensity={0.12}
+          className="rounded-2xl p-4"
+        >
           <p className="text-xs font-medium text-slate-400">Total Rentals</p>
           <p className="mt-2 font-mono text-2xl font-bold text-white">
-            {stats.total}
+            <CountUp to={stats.total} duration={0.9} trigger="load" />
           </p>
-        </div>
+        </SpotlightCard>
 
-        <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
+        <SpotlightCard
+          spotlightColor="#38bdf8"
+          intensity={0.15}
+          className="rounded-2xl p-4"
+        >
           <p className="text-xs font-medium text-slate-400">Checked In</p>
           <p className="mt-2 font-mono text-2xl font-bold text-sky-300">
-            {stats.checkedIn}
+            <CountUp to={stats.checkedIn} duration={0.9} trigger="load" />
           </p>
-        </div>
+        </SpotlightCard>
 
-        <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
+        <SpotlightCard
+          spotlightColor="#fbbf24"
+          intensity={0.15}
+          className="rounded-2xl p-4"
+        >
           <p className="text-xs font-medium text-slate-400">Under Review</p>
           <p className="mt-2 font-mono text-2xl font-bold text-amber-300">
-            {stats.underReview}
+            <CountUp to={stats.underReview} duration={0.9} trigger="load" />
           </p>
-        </div>
+        </SpotlightCard>
 
-        <div className="rounded-2xl border border-slate-800 bg-slate-900 p-4">
+        <SpotlightCard
+          spotlightColor="#34d399"
+          intensity={0.16}
+          className="rounded-2xl p-4"
+        >
           <p className="text-xs font-medium text-slate-400">
             Total Deposit Held
           </p>
           <p className="mt-2 font-mono text-2xl font-bold text-emerald-300">
-            {formatInr(stats.totalDeposit)}
+            <CountUp
+              to={stats.totalDeposit}
+              prefix="₹"
+              locale="en-IN"
+              duration={1.1}
+              trigger="load"
+            />
           </p>
-        </div>
+        </SpotlightCard>
 
-        <div
-          className={`rounded-2xl border p-4 ${
+        <SpotlightCard
+          spotlightColor="#f59e0b"
+          surfaceColor={
+            stats.overdueCount > 0 ? "rgba(69, 26, 3, 0.35)" : "#0f172a"
+          }
+          borderColor={
             stats.overdueCount > 0
-              ? "border-amber-500/40 bg-amber-950/20"
-              : "border-slate-800 bg-slate-900"
-          }`}
+              ? "rgba(245, 158, 11, 0.45)"
+              : "rgba(30, 41, 59, 0.95)"
+          }
+          intensity={0.16}
+          className="rounded-2xl p-4"
         >
           <p className="text-xs font-medium text-slate-400">Overdue Alerts</p>
           <p
@@ -223,10 +312,53 @@ export default function Dashboard({ refreshKey = 0, onDataChanged }) {
               stats.overdueCount > 0 ? "text-amber-300" : "text-slate-300"
             }`}
           >
-            {stats.overdueCount}
+            <CountUp to={stats.overdueCount} duration={0.9} trigger="load" />
           </p>
-        </div>
+        </SpotlightCard>
       </div>
+
+      {/* Filter & Search Bar */}
+      {rentals.length > 0 && (
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-800/90 bg-slate-900/70 px-4 py-3 backdrop-blur-sm">
+          <div className="flex flex-wrap items-center gap-1.5">
+            {STATUS_FILTERS.map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => setStatusFilter(f.id)}
+                className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition-colors cursor-pointer ${
+                  statusFilter === f.id
+                    ? "border border-emerald-500/40 bg-emerald-500/15 text-emerald-300"
+                    : "border border-transparent text-slate-400 hover:bg-slate-800 hover:text-white"
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="relative w-full sm:w-64">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-500" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Filter by item, owner, renter..."
+              className="w-full rounded-xl border border-slate-800 bg-slate-950/90 py-1.5 pl-8 pr-8 text-xs text-white placeholder-slate-500 focus:border-emerald-500 focus:outline-none"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white cursor-pointer"
+                aria-label="Clear search"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       {scanMessage && (
         <div className="mt-4 flex items-center justify-between rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-2.5 text-xs text-emerald-200">
@@ -276,123 +408,156 @@ export default function Dashboard({ refreshKey = 0, onDataChanged }) {
             </Link>
           </div>
         </div>
+      ) : filteredRentals.length === 0 ? (
+        <div className="mt-8 rounded-2xl border border-dashed border-slate-800 bg-slate-900/60 p-8 text-center">
+          <p className="text-sm font-medium text-slate-300">
+            No rentals match the current filter.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setStatusFilter("ALL");
+              setSearchQuery("");
+            }}
+            className="mt-3 rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-medium text-slate-200 hover:bg-slate-700 cursor-pointer"
+          >
+            Reset Filters
+          </button>
+        </div>
       ) : (
         <div className="mt-6 grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
-          {rentals.map((rental) => {
+          {filteredRentals.map((rental) => {
             const thumb = rental.thumbnail;
             const shortHash = rental.baselineSeal?.sha256Hash
               ? `${rental.baselineSeal.sha256Hash.slice(0, 12)}…`
               : "unsealed";
             const isOverdue = Boolean(rental.overdueAlert?.flagged);
+            const cardSpotlight =
+              rental.tamperActive || rental.status === "DISPUTED"
+                ? "#fb7185"
+                : rental.status === "UNDER_REVIEW" || isOverdue
+                ? "#fbbf24"
+                : rental.status === "CHECKED_IN"
+                ? "#38bdf8"
+                : "#34d399";
 
             return (
-              <Link
+              <SpotlightCard
                 key={rental._id}
-                to={`/rentals/${rental._id}`}
-                className="group flex flex-col overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 hover:border-emerald-500/40 transition-all"
+                spotlightColor={cardSpotlight}
+                intensity={0.13}
+                borderGlow={0.75}
+                className="group rounded-2xl p-0 transition-transform duration-200 hover:-translate-y-0.5"
               >
-                {/* Thumbnail */}
-                <div className="relative h-44 w-full overflow-hidden border-b border-slate-800 bg-slate-950">
-                  {thumb?.base64 ? (
-                    <img
-                      src={`data:${thumb.mimeType || "image/webp"};base64,${thumb.base64}`}
-                      alt={rental.title}
-                      className="h-full w-full object-contain p-2 group-hover:scale-[1.02] transition-transform"
-                    />
-                  ) : (
-                    <div className="flex h-full items-center justify-center text-xs text-slate-600">
-                      No preview image
-                    </div>
-                  )}
+                <Link
+                  to={`/rentals/${rental._id}`}
+                  className="flex h-full flex-col"
+                >
+                  {/* Thumbnail */}
+                  <div className="relative h-44 w-full overflow-hidden border-b border-slate-800 bg-slate-950">
+                    {thumb?.base64 ? (
+                      <img
+                        src={`data:${thumb.mimeType || "image/webp"};base64,${thumb.base64}`}
+                        alt={rental.title}
+                        className="h-full w-full object-contain p-2 transition-transform duration-300 group-hover:scale-[1.03]"
+                      />
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-xs text-slate-600">
+                        No preview image
+                      </div>
+                    )}
 
-                  <div className="absolute left-3 top-3 flex flex-wrap items-center gap-1.5">
-                    <span className="rounded-md border border-slate-700 bg-slate-950/90 px-2 py-0.5 text-[11px] font-medium text-slate-200">
-                      {CATEGORY_LABELS[rental.category] || rental.category}
-                    </span>
-                    <span className="rounded-md border border-slate-700 bg-slate-950/90 px-2 py-0.5 font-mono text-[11px] text-slate-400">
-                      {rental.imageCount ?? 0} photo
-                      {rental.imageCount === 1 ? "" : "s"}
-                    </span>
-                  </div>
-
-                  <div className="absolute right-3 top-3">
-                    <StatusBadge status={rental.status} size="xs" />
-                  </div>
-                </div>
-
-                <div className="flex flex-1 flex-col p-4">
-                  {isOverdue && (
-                    <div className="mb-3 flex items-center gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-2.5 py-1.5 text-[11px] text-amber-200">
-                      <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-400" />
-                      <span className="truncate font-medium">
-                        {rental.overdueAlert?.note ||
-                          "Checkout overdue — follow-up inspection required"}
+                    <div className="absolute left-3 top-3 flex flex-wrap items-center gap-1.5">
+                      <span className="rounded-md border border-slate-700 bg-slate-950/90 px-2 py-0.5 text-[11px] font-medium text-slate-200">
+                        {CATEGORY_LABELS[rental.category] || rental.category}
+                      </span>
+                      <span className="rounded-md border border-slate-700 bg-slate-950/90 px-2 py-0.5 font-mono text-[11px] text-slate-400">
+                        {rental.imageCount ?? 0} photo
+                        {rental.imageCount === 1 ? "" : "s"}
                       </span>
                     </div>
-                  )}
 
-                  {rental.tamperActive && (
-                    <div className="mb-3 flex items-center gap-2 rounded-lg border border-rose-500/40 bg-rose-500/10 px-2.5 py-1.5 text-[11px] text-rose-200">
-                      <ShieldAlert className="h-3.5 w-3.5 shrink-0 text-rose-400" />
-                      <span className="font-semibold">
-                        Active DB Tamper Simulation
-                      </span>
-                    </div>
-                  )}
-
-                  <h2 className="text-base font-semibold text-white group-hover:text-emerald-300 transition-colors line-clamp-1">
-                    {rental.title}
-                  </h2>
-
-                  <p className="mt-1 text-xs text-slate-400">
-                    Owner:{" "}
-                    <span className="text-slate-200">{rental.ownerName}</span>{" "}
-                    <span className="text-slate-600">→</span> Renter:{" "}
-                    <span className="text-slate-200">{rental.renterName}</span>
-                  </p>
-
-                  <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl border border-slate-800 bg-slate-950/70 p-2.5 text-xs">
-                    <div>
-                      <span className="text-[10px] uppercase tracking-wider text-slate-500">
-                        Deposit Held
-                      </span>
-                      <p className="mt-0.5 flex items-center gap-1 font-mono font-semibold text-emerald-300">
-                        <IndianRupee className="h-3 w-3" />
-                        {(Number(rental.depositAmount) || 0).toLocaleString(
-                          "en-IN"
-                        )}
-                      </p>
-                    </div>
-                    <div>
-                      <span className="text-[10px] uppercase tracking-wider text-slate-500">
-                        Due Date
-                      </span>
-                      <p className="mt-0.5 flex items-center gap-1 font-mono text-slate-200">
-                        <Clock className="h-3 w-3 text-slate-500" />
-                        {formatDate(rental.dueDate)}
-                      </p>
+                    <div className="absolute right-3 top-3">
+                      <StatusBadge status={rental.status} size="xs" />
                     </div>
                   </div>
 
-                  <div className="mt-auto flex items-center justify-between pt-4 text-xs">
-                    <span
-                      className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 font-mono text-[11px] ${
-                        rental.tamperActive
-                          ? "border-rose-500/35 bg-rose-500/10 text-rose-300"
-                          : "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
-                      }`}
-                    >
-                      <ShieldCheck className="h-3 w-3" />
-                      {shortHash}
-                    </span>
+                  <div className="flex flex-1 flex-col p-4">
+                    {isOverdue && (
+                      <div className="mb-3 flex items-center gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-2.5 py-1.5 text-[11px] text-amber-200">
+                        <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-400" />
+                        <span className="truncate font-medium">
+                          {rental.overdueAlert?.note ||
+                            "Checkout overdue — follow-up inspection required"}
+                        </span>
+                      </div>
+                    )}
 
-                    <span className="inline-flex items-center gap-1 font-semibold text-emerald-400 group-hover:translate-x-0.5 transition-transform">
-                      <span>Inspect</span>
-                      <ArrowRight className="h-3.5 w-3.5" />
-                    </span>
+                    {rental.tamperActive && (
+                      <div className="mb-3 flex items-center gap-2 rounded-lg border border-rose-500/40 bg-rose-500/10 px-2.5 py-1.5 text-[11px] text-rose-200">
+                        <ShieldAlert className="h-3.5 w-3.5 shrink-0 text-rose-400" />
+                        <span className="font-semibold">
+                          Active DB Tamper Simulation
+                        </span>
+                      </div>
+                    )}
+
+                    <h2 className="text-base font-semibold text-white group-hover:text-emerald-300 transition-colors line-clamp-1">
+                      {rental.title}
+                    </h2>
+
+                    <p className="mt-1 text-xs text-slate-400">
+                      Owner:{" "}
+                      <span className="text-slate-200">{rental.ownerName}</span>{" "}
+                      <span className="text-slate-600">→</span> Renter:{" "}
+                      <span className="text-slate-200">
+                        {rental.renterName}
+                      </span>
+                    </p>
+
+                    <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl border border-slate-800 bg-slate-950/70 p-2.5 text-xs">
+                      <div>
+                        <span className="text-[10px] uppercase tracking-wider text-slate-500">
+                          Deposit Held
+                        </span>
+                        <p className="mt-0.5 flex items-center gap-1 font-mono font-semibold text-emerald-300">
+                          <IndianRupee className="h-3 w-3" />
+                          {(Number(rental.depositAmount) || 0).toLocaleString(
+                            "en-IN"
+                          )}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-[10px] uppercase tracking-wider text-slate-500">
+                          Due Date
+                        </span>
+                        <p className="mt-0.5 flex items-center gap-1 font-mono text-slate-200">
+                          <Clock className="h-3 w-3 text-slate-500" />
+                          {formatDate(rental.dueDate)}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-auto flex items-center justify-between pt-4 text-xs">
+                      <span
+                        className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 font-mono text-[11px] ${
+                          rental.tamperActive
+                            ? "border-rose-500/35 bg-rose-500/10 text-rose-300"
+                            : "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
+                        }`}
+                      >
+                        <ShieldCheck className="h-3 w-3" />
+                        {shortHash}
+                      </span>
+
+                      <span className="inline-flex items-center gap-1 font-semibold text-emerald-400 group-hover:translate-x-0.5 transition-transform">
+                        <span>Inspect</span>
+                        <ArrowRight className="h-3.5 w-3.5" />
+                      </span>
+                    </div>
                   </div>
-                </div>
-              </Link>
+                </Link>
+              </SpotlightCard>
             );
           })}
         </div>
@@ -405,7 +570,7 @@ export default function Dashboard({ refreshKey = 0, onDataChanged }) {
           onClick={() => setRatesOpen(false)}
         >
           <div
-            className="flex max-h-[85vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-slate-700 bg-slate-900"
+            className="flex max-h-[85vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between border-b border-slate-800 px-5 py-4">
@@ -423,28 +588,34 @@ export default function Dashboard({ refreshKey = 0, onDataChanged }) {
                 type="button"
                 onClick={() => setRatesOpen(false)}
                 className="rounded-lg border border-slate-700 bg-slate-800 p-1.5 text-slate-300 hover:text-white cursor-pointer"
+                aria-label="Close repair rates modal"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
             <div className="flex flex-wrap gap-1.5 border-b border-slate-800 px-5 py-3">
-              {["ALL", "electronics", "camera", "bike_gear", "pg_room", "general"].map(
-                (cat) => (
-                  <button
-                    key={cat}
-                    type="button"
-                    onClick={() => setRateCategoryFilter(cat)}
-                    className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer ${
-                      rateCategoryFilter === cat
-                        ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
-                        : "bg-slate-950 text-slate-400 border border-slate-800 hover:text-white"
-                    }`}
-                  >
-                    {cat === "ALL" ? "All Categories" : CATEGORY_LABELS[cat] || cat}
-                  </button>
-                )
-              )}
+              {[
+                "ALL",
+                "electronics",
+                "camera",
+                "bike_gear",
+                "pg_room",
+                "general",
+              ].map((cat) => (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => setRateCategoryFilter(cat)}
+                  className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer ${
+                    rateCategoryFilter === cat
+                      ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+                      : "bg-slate-950 text-slate-400 border border-slate-800 hover:text-white"
+                  }`}
+                >
+                  {cat === "ALL" ? "All Categories" : CATEGORY_LABELS[cat] || cat}
+                </button>
+              ))}
             </div>
 
             <div className="flex-1 overflow-y-auto p-5">

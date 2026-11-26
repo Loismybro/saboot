@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import {
   AlertOctagon,
+  Check,
+  Copy,
   Loader2,
   RotateCcw,
   ShieldAlert,
@@ -12,6 +14,8 @@ import {
   simulateRentalTamper,
   verifyRentalHash,
 } from "../api/client.js";
+import DecryptedText from "./reactbits/DecryptedText.jsx";
+import SpotlightCard from "./reactbits/SpotlightCard.jsx";
 import StatusBadge from "./StatusBadge.jsx";
 
 export function HashSealCard({
@@ -23,6 +27,8 @@ export function HashSealCard({
   const [verification, setVerification] = useState(sealVerification || null);
   const [busyAction, setBusyAction] = useState("");
   const [error, setError] = useState("");
+  const [verifySeq, setVerifySeq] = useState(0);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     setVerification(sealVerification || null);
@@ -33,6 +39,17 @@ export function HashSealCard({
   const actualHash = verification?.actualHash ?? null;
   const isValid = verification ? Boolean(verification.valid) : null;
 
+  async function handleCopyHash() {
+    if (!expectedHash || expectedHash === "—") return;
+    try {
+      await navigator.clipboard.writeText(expectedHash);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard API may be unavailable in restricted contexts
+    }
+  }
+
   async function runAction(actionType) {
     if (!rentalId || busyAction) return;
     setBusyAction(actionType);
@@ -42,10 +59,12 @@ export function HashSealCard({
       if (actionType === "verify") {
         res = await verifyRentalHash(rentalId);
         setVerification(res);
+        setVerifySeq((s) => s + 1);
         onUpdated?.({ type: "verify", sealVerification: res });
       } else if (actionType === "tamper") {
         res = await simulateRentalTamper(rentalId);
         setVerification(res.sealVerification);
+        setVerifySeq((s) => s + 1);
         onUpdated?.({
           type: "tamper",
           rental: res.rental,
@@ -54,6 +73,7 @@ export function HashSealCard({
       } else if (actionType === "restore") {
         res = await restoreRentalSeal(rentalId);
         setVerification(res.sealVerification);
+        setVerifySeq((s) => s + 1);
         onUpdated?.({
           type: "restore",
           rental: res.rental,
@@ -68,12 +88,16 @@ export function HashSealCard({
   }
 
   return (
-    <section
-      className={`rounded-2xl border p-5 transition-colors ${
+    <SpotlightCard
+      spotlightColor={isValid === false ? "#fb7185" : "#34d399"}
+      surfaceColor={isValid === false ? "rgba(76, 5, 25, 0.25)" : "#0f172a"}
+      borderColor={
         isValid === false
-          ? "border-rose-500/50 bg-rose-950/20"
-          : "border-slate-800 bg-slate-900"
-      }`}
+          ? "rgba(244, 63, 94, 0.5)"
+          : "rgba(30, 41, 59, 0.95)"
+      }
+      intensity={0.12}
+      className="rounded-2xl p-5"
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
@@ -128,13 +152,54 @@ export function HashSealCard({
         </div>
       )}
 
-      <div className="mt-4 space-y-2 rounded-xl border border-slate-800 bg-slate-950 p-3.5 font-mono text-xs">
-        <div>
-          <span className="text-slate-500 uppercase text-[10px]">
-            Sealed Expected Hash
-          </span>
-          <p className="mt-0.5 break-all text-emerald-300">{expectedHash}</p>
+      <div className="mt-4 space-y-2 rounded-xl border border-slate-800 bg-slate-950/90 p-3.5 font-mono text-xs">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <span className="text-slate-500 uppercase text-[10px]">
+              Sealed Expected Hash
+            </span>
+            <p className="mt-0.5 break-all text-emerald-300">
+              {expectedHash !== "—" ? (
+                <DecryptedText
+                  key={`${expectedHash}-${verifySeq}`}
+                  text={expectedHash}
+                  characters="0123456789abcdef"
+                  animateOn="view"
+                  sequential
+                  speed={10}
+                  maxIterations={5}
+                  revealDirection="start"
+                  breakAll
+                  scrambleColor={isValid === false ? "#fb7185" : "#34d399"}
+                />
+              ) : (
+                "—"
+              )}
+            </p>
+          </div>
+
+          {expectedHash !== "—" && (
+            <button
+              type="button"
+              onClick={handleCopyHash}
+              title="Copy SHA-256 hash"
+              className="mt-1 inline-flex shrink-0 items-center gap-1 rounded-md border border-slate-800 bg-slate-900 px-2 py-1 text-[10px] text-slate-300 hover:border-slate-700 hover:text-white transition-colors cursor-pointer"
+            >
+              {copied ? (
+                <>
+                  <Check className="h-3 w-3 text-emerald-400" />
+                  <span className="text-emerald-300">Copied</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="h-3 w-3" />
+                  <span>Copy</span>
+                </>
+              )}
+            </button>
+          )}
         </div>
+
         {isValid === false && (
           <div className="border-t border-slate-800 pt-2">
             <span className="text-rose-400 uppercase text-[10px]">
@@ -196,7 +261,7 @@ export function HashSealCard({
           <span>Restore Seal</span>
         </button>
       </div>
-    </section>
+    </SpotlightCard>
   );
 }
 

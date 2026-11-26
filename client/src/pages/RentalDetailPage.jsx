@@ -19,6 +19,10 @@ import { checkOutRental, getRentalById } from "../api/client.js";
 import { downloadVerdictPdf } from "../utils/pdfReport.js";
 import HashSealCard from "../components/HashSealCard.jsx";
 import PhotoGrid from "../components/PhotoGrid.jsx";
+import BlurText from "../components/reactbits/BlurText.jsx";
+import CountUp from "../components/reactbits/CountUp.jsx";
+import SpotlightCard from "../components/reactbits/SpotlightCard.jsx";
+import StarBorder from "../components/reactbits/StarBorder.jsx";
 import StatusBadge from "../components/StatusBadge.jsx";
 import TracePanel from "../components/TracePanel.jsx";
 
@@ -205,6 +209,7 @@ export default function RentalDetailPage({ refreshKey = 0, onDataChanged }) {
 
   const [checkoutFiles, setCheckoutFiles] = useState([]);
   const [checkoutPreviews, setCheckoutPreviews] = useState([]);
+  const [checkoutDragActive, setCheckoutDragActive] = useState(false);
   const [checkoutBusy, setCheckoutBusy] = useState(false);
   const [checkoutError, setCheckoutError] = useState("");
 
@@ -352,7 +357,9 @@ export default function RentalDetailPage({ refreshKey = 0, onDataChanged }) {
   const lineItems = settlement?.lineItems || [];
   const newFindings = inspection?.newFindings || [];
 
-  const depositAmount = Number(settlement?.depositAmount ?? rental.depositAmount ?? 0);
+  const depositAmount = Number(
+    settlement?.depositAmount ?? rental.depositAmount ?? 0
+  );
   const hasOverride =
     settlement?.overrideTotalDeduction !== null &&
     settlement?.overrideTotalDeduction !== undefined;
@@ -408,7 +415,11 @@ export default function RentalDetailPage({ refreshKey = 0, onDataChanged }) {
       </div>
 
       {/* Case Hero Summary */}
-      <div className="mb-6 rounded-2xl border border-slate-800 bg-slate-900 p-5">
+      <SpotlightCard
+        spotlightColor="#34d399"
+        intensity={0.11}
+        className="mb-6 rounded-2xl p-5"
+      >
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <div className="flex flex-wrap items-center gap-2">
@@ -419,9 +430,17 @@ export default function RentalDetailPage({ refreshKey = 0, onDataChanged }) {
                 ID: {rental._id}
               </span>
             </div>
-            <h1 className="mt-2 text-2xl font-bold text-white">
-              {rental.title}
-            </h1>
+            <BlurText
+              as="h1"
+              key={rental._id}
+              text={rental.title}
+              delay={50}
+              stepDuration={0.3}
+              blur={8}
+              distance={18}
+              trigger="load"
+              className="mt-2 text-2xl font-bold text-white"
+            />
             <p className="mt-1 text-sm text-slate-400">
               Owner: <span className="text-slate-200">{rental.ownerName}</span>{" "}
               <span className="text-slate-600">•</span> Renter:{" "}
@@ -438,7 +457,13 @@ export default function RentalDetailPage({ refreshKey = 0, onDataChanged }) {
               Escrow Deposit Held
             </span>
             <p className="mt-0.5 font-mono text-2xl font-bold text-emerald-300">
-              {formatInr(depositAmount)}
+              <CountUp
+                to={depositAmount}
+                prefix="₹"
+                locale="en-IN"
+                duration={0.8}
+                trigger="load"
+              />
             </p>
           </div>
         </div>
@@ -452,7 +477,7 @@ export default function RentalDetailPage({ refreshKey = 0, onDataChanged }) {
             </span>
           </div>
         )}
-      </div>
+      </SpotlightCard>
 
       {/* Split-Screen Hero Layout */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
@@ -471,14 +496,17 @@ export default function RentalDetailPage({ refreshKey = 0, onDataChanged }) {
           />
 
           {/* Sealed Summary & Accessories */}
-          <section className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+          <SpotlightCard
+            spotlightColor="#34d399"
+            intensity={0.08}
+            className="rounded-2xl p-5"
+          >
             <div className="flex items-center gap-2 text-sm font-semibold text-white">
               <PackageCheck className="h-4 w-4 text-emerald-400" />
               <span>Sealed Check-In Baseline Summary &amp; Accessories</span>
             </div>
             <p className="mt-2 text-xs leading-relaxed text-slate-300">
-              {rental.baselineSeal?.summary ||
-                "No baseline summary recorded."}
+              {rental.baselineSeal?.summary || "No baseline summary recorded."}
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               {accessories.length > 0 ? (
@@ -496,10 +524,16 @@ export default function RentalDetailPage({ refreshKey = 0, onDataChanged }) {
                 </span>
               )}
             </div>
-          </section>
+          </SpotlightCard>
 
           {/* Green Card: Pre-Existing Flaws Ignored (₹0) */}
-          <section className="rounded-2xl border border-emerald-500/35 bg-emerald-950/15 p-5">
+          <SpotlightCard
+            spotlightColor="#10b981"
+            surfaceColor="rgba(2, 44, 34, 0.25)"
+            borderColor="rgba(16, 185, 129, 0.35)"
+            intensity={0.12}
+            className="rounded-2xl p-5"
+          >
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="h-5 w-5 text-emerald-400" />
@@ -556,15 +590,27 @@ export default function RentalDetailPage({ refreshKey = 0, onDataChanged }) {
                 No pre-existing flaws recorded at Check-In.
               </p>
             )}
-          </section>
+          </SpotlightCard>
 
           {/* Red Card: New Damage / Missing Accessories */}
-          <section
-            className={`rounded-2xl border p-5 ${
+          <SpotlightCard
+            spotlightColor={
               lineItems.length > 0 || newFindings.length > 0
-                ? "border-rose-500/40 bg-rose-950/15"
-                : "border-slate-800 bg-slate-900"
-            }`}
+                ? "#fb7185"
+                : "#34d399"
+            }
+            surfaceColor={
+              lineItems.length > 0 || newFindings.length > 0
+                ? "rgba(76, 5, 25, 0.2)"
+                : "#0f172a"
+            }
+            borderColor={
+              lineItems.length > 0 || newFindings.length > 0
+                ? "rgba(244, 63, 94, 0.4)"
+                : "rgba(30, 41, 59, 0.95)"
+            }
+            intensity={0.12}
+            className="rounded-2xl p-5"
           >
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
@@ -643,11 +689,11 @@ export default function RentalDetailPage({ refreshKey = 0, onDataChanged }) {
 
                 <div className="mt-2 flex h-3 w-full overflow-hidden rounded-full bg-emerald-500/25">
                   <div
-                    className="h-full bg-rose-500 transition-all"
+                    className="h-full bg-rose-500 transition-all duration-500"
                     style={{ width: `${deductionPct}%` }}
                   />
                   <div
-                    className="h-full bg-emerald-500 transition-all"
+                    className="h-full bg-emerald-500 transition-all duration-500"
                     style={{ width: `${100 - deductionPct}%` }}
                   />
                 </div>
@@ -680,13 +726,17 @@ export default function RentalDetailPage({ refreshKey = 0, onDataChanged }) {
                 </div>
               </div>
             )}
-          </section>
+          </SpotlightCard>
         </div>
 
         {/* RIGHT COLUMN (5 cols): Check-Out Upload, TracePanel, HITL & PDF Actions */}
         <div className="space-y-6 lg:col-span-5">
           {/* Check-Out Upload Form */}
-          <section className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+          <SpotlightCard
+            spotlightColor="#38bdf8"
+            intensity={0.1}
+            className="rounded-2xl p-5"
+          >
             <div className="flex items-center justify-between gap-2 border-b border-slate-800 pb-3.5">
               <div className="flex items-center gap-2.5">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-sky-500/30 bg-sky-500/10 text-sky-400">
@@ -717,17 +767,44 @@ export default function RentalDetailPage({ refreshKey = 0, onDataChanged }) {
                   <span className="text-xs text-slate-400">
                     Selected: {checkoutFiles.length}/4 photo(s)
                   </span>
-                  <button
-                    type="button"
-                    onClick={handleAttachSampleDamaged}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-rose-500/35 bg-rose-500/10 px-2.5 py-1.5 text-xs font-semibold text-rose-300 hover:bg-rose-500/20 transition-colors cursor-pointer"
-                  >
-                    <ImagePlus className="h-3.5 w-3.5" />
-                    <span>Attach Sample Damaged Return Photo</span>
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {checkoutFiles.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setCheckoutFiles([])}
+                        className="rounded-lg border border-slate-700 bg-slate-950 px-2 py-1.5 text-xs text-slate-400 hover:text-white cursor-pointer"
+                      >
+                        Clear
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleAttachSampleDamaged}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-rose-500/35 bg-rose-500/10 px-2.5 py-1.5 text-xs font-semibold text-rose-300 hover:bg-rose-500/20 transition-colors cursor-pointer"
+                    >
+                      <ImagePlus className="h-3.5 w-3.5" />
+                      <span>Attach Sample Damaged Return Photo</span>
+                    </button>
+                  </div>
                 </div>
 
-                <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-700 bg-slate-950/60 p-5 text-center hover:border-slate-600 transition-colors">
+                <label
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setCheckoutDragActive(true);
+                  }}
+                  onDragLeave={() => setCheckoutDragActive(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setCheckoutDragActive(false);
+                    addCheckoutFiles(e.dataTransfer.files);
+                  }}
+                  className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-5 text-center transition-colors ${
+                    checkoutDragActive
+                      ? "border-emerald-400 bg-emerald-500/10"
+                      : "border-slate-700 bg-slate-950/60 hover:border-slate-600"
+                  }`}
+                >
                   <input
                     type="file"
                     accept="image/*"
@@ -740,7 +817,7 @@ export default function RentalDetailPage({ refreshKey = 0, onDataChanged }) {
                   />
                   <UploadCloud className="h-6 w-6 text-sky-400" />
                   <p className="mt-2 text-xs font-medium text-slate-200">
-                    Click to select Check-Out photos (max 4, 8 MB each)
+                    Drop or click to select Check-Out photos (max 4, 8 MB each)
                   </p>
                 </label>
 
@@ -783,10 +860,17 @@ export default function RentalDetailPage({ refreshKey = 0, onDataChanged }) {
                   </p>
                 )}
 
-                <button
+                <StarBorder
                   type="submit"
                   disabled={checkoutBusy}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-slate-950 hover:bg-emerald-400 disabled:opacity-50 transition-colors cursor-pointer"
+                  color="#34d399"
+                  trailColor="#10b981"
+                  backgroundColor="#10b981"
+                  textColor="#020617"
+                  borderColor="rgba(52, 211, 153, 0.65)"
+                  radius={12}
+                  duration={3.5}
+                  className="flex w-full px-4 py-2.5 text-sm font-semibold hover:brightness-110 transition-all"
                 >
                   {checkoutBusy ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -798,10 +882,10 @@ export default function RentalDetailPage({ refreshKey = 0, onDataChanged }) {
                       ? "Running 4-Stage Forensic Diff..."
                       : "Run Check-Out Forensic Diff"}
                   </span>
-                </button>
+                </StarBorder>
               </form>
             )}
-          </section>
+          </SpotlightCard>
 
           {/* Glass-Box TracePanel */}
           <TracePanel
@@ -813,7 +897,11 @@ export default function RentalDetailPage({ refreshKey = 0, onDataChanged }) {
 
           {/* HITL & Verdict Actions */}
           {settlement && (
-            <section className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+            <SpotlightCard
+              spotlightColor="#fbbf24"
+              intensity={0.1}
+              className="rounded-2xl p-5"
+            >
               <div className="flex items-center justify-between gap-2">
                 <h3 className="text-sm font-semibold text-white">
                   HITL Settlement &amp; Verdict Export
@@ -850,7 +938,7 @@ export default function RentalDetailPage({ refreshKey = 0, onDataChanged }) {
                   <span>Download PDF</span>
                 </button>
               </div>
-            </section>
+            </SpotlightCard>
           )}
         </div>
       </div>

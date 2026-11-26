@@ -5,6 +5,8 @@ import {
   ShieldAlert,
   ShieldCheck,
 } from "lucide-react";
+import CountUp from "./reactbits/CountUp.jsx";
+import SpotlightCard from "./reactbits/SpotlightCard.jsx";
 import StatusBadge from "./StatusBadge.jsx";
 
 export function TracePanel({
@@ -21,7 +23,11 @@ export function TracePanel({
   const isFlagged = verdict === "FLAG";
 
   return (
-    <section className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+    <SpotlightCard
+      spotlightColor={isFlagged ? "#fb7185" : "#34d399"}
+      intensity={0.1}
+      className="rounded-2xl p-5"
+    >
       <div className="flex items-center justify-between gap-3 border-b border-slate-800 pb-3.5">
         <div className="flex items-center gap-2.5">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-400">
@@ -79,11 +85,12 @@ export function TracePanel({
           </p>
         </div>
       ) : (
-        <ol className="mt-4 space-y-3">
+        <ol className="relative mt-4 space-y-3">
           {agentTrace.map((entry, idx) => (
             <li
               key={`${entry.step}-${idx}`}
-              className="rounded-xl border border-slate-800 bg-slate-950/70 p-3.5"
+              style={{ animationDelay: `${idx * 85}ms` }}
+              className="animate-trace-step rounded-xl border border-slate-800 bg-slate-950/80 p-3.5"
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
@@ -134,12 +141,17 @@ export function TracePanel({
             <div className="flex items-center justify-between text-xs">
               <span className="text-slate-400">Auditor Confidence</span>
               <span className="font-mono font-semibold text-slate-200">
-                {confidence}%
+                <CountUp
+                  to={confidence}
+                  duration={0.9}
+                  suffix="%"
+                  trigger="load"
+                />
               </span>
             </div>
             <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-slate-800">
               <div
-                className={`h-full rounded-full transition-all ${
+                className={`h-full rounded-full transition-all duration-700 ${
                   isFlagged ? "bg-rose-500" : "bg-emerald-500"
                 }`}
                 style={{ width: `${confidence}%` }}
@@ -168,7 +180,7 @@ export function TracePanel({
           )}
         </div>
       )}
-    </section>
+    </SpotlightCard>
   );
 }
 
